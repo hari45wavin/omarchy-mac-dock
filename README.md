@@ -27,18 +27,20 @@
 ## ✨ Key Features
 
 - **🍎 macOS Floating Glass Shelf** — Translucent frosted-glass backdrop with specular rim reflections, theme-aware blending, and ambient depth shadows.
-- **🎨 Vibrant Squircle Icons** — Handcrafted gradient palettes, crisp vector icon rendering, glossy highlights, and automatic fallback glyphs for any application.
+- **🎨 Modern 2026 macOS Vector Icons** — Handcrafted Big Sur / Sonoma SVG iconography (smiling dual-tone Finder, cosmic Launchpad rocket, Mission Control desktop spaces, neon ECG Activity Monitor, Apple precision metallic gear, 3D isometric Plugin Store, and dynamic empty/full frosted wastebasket).
+- **🙈 Intelligent Auto-Hide (Intellihide)** — Smoothly slides the dock down when application windows are open or overlapping, and smoothly slides back up when your cursor touches the bottom edge. Configurable in settings!
 - **🌊 Interactive Hover Magnification** — Smooth cubic-bezier zoom animation as your cursor sweeps across the dock shelf.
+- **💬 Floating High-Contrast Tooltips** — Solid frosted dark tooltip pills with drop shadows and pointers that never get cut off or merge with open windows above.
 - **🟢 Hyprland Window Tracking & Active Dots** — Live window state indicators (illuminated pill for the focused window, glowing dot for background running apps).
 - **🪟 Click-to-Minimize & Toggle Focus** — Click an active app's dock icon to instantly minimize it into Hyprland's scratchpad; click again to restore it seamlessly.
 - **🚀 Pre-Task System Launchers & Modules**:
-  - 📱 **Launchpad / Menu** — Quick-open Omarchy application menu with a native 3x3 grid icon.
+  - 📱 **Launchpad / Menu** — Quick-open Omarchy application menu with modern rocket launcher icon.
   - 🖥️ **Mission Control** — Workspace switcher displaying the active Hyprland workspace number.
   - 📈 **Activity Monitor** — One-click launcher for system performance monitoring.
   - 📦 **Plugin Store (Omaplug)** — Instant access to installed Omarchy extensions.
   - ⚙️ **Dock Customizer** — Dedicated gear module to open settings anytime.
-  - 🗑️ **Trash Bin** — Direct shortcut to your desktop trash folder.
-- **🎛️ Live In-App Customizer Dialog** — Search through all installed system apps, pin or unpin with one click, drag/reorder apps, and resize the dock live from Compact (38px) up to XL (72px).
+  - 🗑️ **Trash Bin** — Dynamic empty/full frosted glass wastebasket.
+- **🎛️ Live In-App Customizer Dialog** — Search through all installed system apps, pin or unpin with one click, drag/reorder apps, and resize the dock live from Compact (36px) up to XL (72px) with rock-solid atomic persistence.
 
 ---
 

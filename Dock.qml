@@ -13,10 +13,23 @@ PanelWindow {
   id: dockWindow
 
   property string home: Quickshell.env("HOME")
+  property string pluginDir: home + "/.config/omarchy/plugins/omarchy-mac-dock"
+  property string iconsDir: pluginDir + "/assets/icons"
   property string configPath: home + "/.config/omarchy/mac-dock.json"
   property var dockConfig: DockModel.defaultConfig()
   property var toplevelsList: []
   property var settingsPanel: null
+  property bool isWritingConfig: false
+
+  // Auto-hide & Hover State Tracking
+  property bool isDockHovered: false
+  readonly property bool autoHideEnabled: dockConfig.autoHide === true
+  readonly property bool hasActiveWindows: ToplevelManager.activeToplevel !== null
+  readonly property bool isSettingsOpen: settingsPanel !== null && settingsPanel.visible
+  readonly property bool shouldHide: autoHideEnabled && hasActiveWindows && !isDockHovered && !isSettingsOpen
+
+  // Trash Full State Tracking
+  property bool isTrashFull: false
 
   visible: true
   color: "transparent"
@@ -27,15 +40,26 @@ PanelWindow {
     right: true
   }
 
-  implicitHeight: shelf.height + (dockConfig.bottomMargin || 10) + 16
+  // Generous headroom (+64px) so magnified icons and floating tooltips NEVER get cut off
+  implicitHeight: shelf.height + (dockConfig.bottomMargin || 10) + 64
 
   WlrLayershell.namespace: "omarchy-mac-dock"
   WlrLayershell.layer: WlrLayer.Top
-  exclusionMode: dockConfig.reserveSpace ? ExclusionMode.Auto : ExclusionMode.Ignore
+  exclusionMode: (dockConfig.reserveSpace && !autoHideEnabled) ? ExclusionMode.Auto : ExclusionMode.Ignore
 
-  // Input mask ensures mouse clicks outside the rounded shelf pass straight to background windows
+  // Input mask: when hidden, only the 12px bottom trigger hotspot receives hover;
+  // when visible, shelfArea receives clicks while outside clicks pass through
   mask: Region {
-    item: shelf
+    item: dockWindow.shouldHide ? triggerHotspot : shelfArea
+  }
+
+  // Interactive shelf area for input masking (includes space for floating tooltips)
+  Item {
+    id: shelfArea
+    anchors.horizontalCenter: shelf.horizontalCenter
+    anchors.bottom: parent.bottom
+    width: shelf.width + 40
+    height: shelf.height + (dockConfig.bottomMargin || 10) + 54
   }
 
   // Hyprland / Wayland Toplevels Tracking for Running Dots
@@ -57,33 +81,75 @@ PanelWindow {
     function onActiveToplevelChanged() { dockWindow.updateToplevels() }
   }
 
+  // Trash State Monitor
+  Timer {
+    id: trashTimer
+    interval: 3000
+    repeat: true
+    running: true
+    triggeredOnStart: true
+    onTriggered: {
+      trashCheckProcess.running = true
+    }
+  }
+
+  Process {
+    id: trashCheckProcess
+    command: ["bash", "-c", "test -d \"$HOME/.local/share/Trash/files\" && [ $(ls -A \"$HOME/.local/share/Trash/files\" 2>/dev/null | wc -l) -gt 0 ] && echo 1 || echo 0"]
+    stdout: StdioCollector {
+      onDataChanged: {
+        var res = (text || "").trim()
+        dockWindow.isTrashFull = (res === "1")
+      }
+    }
+  }
+
   Component.onCompleted: {
     loadConfig()
     updateToplevels()
   }
 
-  // Load config from ~/.config/omarchy/mac-dock.json
+  // Load config from ~/.config/omarchy/mac-dock.json with anti-revert protection
   function loadConfig() {
+    if (isWritingConfig) {
+      isWritingConfig = false
+      return
+    }
     if (configFileView.loaded) {
       try {
-        var parsed = JSON.parse(configFileView.text())
-        if (parsed && typeof parsed === "object") {
-          dockConfig = parsed
-          return
+        var txt = configFileView.text()
+        if (txt && txt.trim().length > 0) {
+          var parsed = JSON.parse(txt)
+          if (parsed && typeof parsed === "object" && parsed.pinnedApps) {
+            dockConfig = parsed
+            return
+          }
         }
       } catch (e) {
-        console.warn("mac-dock: failed to parse config JSON, using defaults")
+        console.warn("mac-dock: failed to parse config JSON, keeping current settings")
+        return // NEVER REVERT TO DEFAULT AND WIPE USER SETTINGS
       }
     }
-    dockConfig = DockModel.defaultConfig()
+    if (!dockConfig || !dockConfig.pinnedApps) {
+      dockConfig = DockModel.defaultConfig()
+    }
   }
 
   function saveConfig(newConfig) {
     dockConfig = newConfig
+    isWritingConfig = true
     Quickshell.execDetached([
       "python3",
       "-c",
-      "import sys; open(sys.argv[2], 'w').write(sys.argv[1])",
+      "import sys, os\n" +
+      "data = sys.argv[1]\n" +
+      "dest = sys.argv[2]\n" +
+      "tmp = dest + '.tmp'\n" +
+      "with open(tmp, 'w') as f:\n" +
+      "  f.write(data)\n" +
+      "  f.flush()\n" +
+      "  os.fsync(f.fileno())\n" +
+      "os.replace(tmp, dest)\n",
       JSON.stringify(newConfig, null, 2),
       dockWindow.configPath
     ])
@@ -157,14 +223,51 @@ PanelWindow {
     }
   }
 
+  // Auto-Hide Delay Timers
+  Timer {
+    id: hideTimer
+    interval: 350
+    onTriggered: {
+      if (!shelfHoverArea.containsMouse && !triggerHoverArea.containsMouse) {
+        dockWindow.isDockHovered = false
+      }
+    }
+  }
+
+  // Bottom Edge Trigger Hotspot (reveals dock on cursor touch when hidden)
+  Item {
+    id: triggerHotspot
+    anchors.bottom: parent.bottom
+    anchors.left: parent.left
+    anchors.right: parent.right
+    height: 12
+    z: 9999
+
+    MouseArea {
+      id: triggerHoverArea
+      anchors.fill: parent
+      hoverEnabled: true
+      onEntered: {
+        hideTimer.stop()
+        dockWindow.isDockHovered = true
+      }
+    }
+  }
+
   // Floating Frosted Glass Shelf (macOS Style)
   Rectangle {
     id: shelf
     anchors.horizontalCenter: parent.horizontalCenter
     anchors.bottom: parent.bottom
-    anchors.bottomMargin: dockConfig.bottomMargin || 10
 
-    readonly property int baseItemSize: dockConfig.dockSize || 52
+    // Auto-hide smooth slide down animation
+    anchors.bottomMargin: dockWindow.shouldHide ? (-height - 20) : (dockConfig.bottomMargin || 10)
+
+    Behavior on anchors.bottomMargin {
+      NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
+    }
+
+    readonly property int baseItemSize: dockConfig.dockSize || 42
 
     height: baseItemSize + 16
     width: dockLayout.width + 28
@@ -197,13 +300,34 @@ PanelWindow {
       color: Qt.rgba(255, 255, 255, 0.55)
     }
 
+    // Hover area covering the whole shelf to maintain visibility during interactions
+    MouseArea {
+      id: shelfHoverArea
+      anchors.fill: parent
+      hoverEnabled: true
+      acceptedButtons: Qt.RightButton
+      onEntered: {
+        hideTimer.stop()
+        dockWindow.isDockHovered = true
+      }
+      onExited: {
+        hideTimer.start()
+      }
+      onClicked: function(mouse) {
+        if (mouse.button === Qt.RightButton) {
+          dockWindow.openSettings()
+        }
+      }
+    }
+
     // Dock Items Layout: using Row for rock-solid horizontal layout
     Row {
       id: dockLayout
-      anchors.centerIn: parent
+      anchors.horizontalCenter: parent.horizontalCenter
+      anchors.verticalCenter: parent.verticalCenter
       spacing: 8
 
-      // 1. App Launcher / Launchpad (Pre-task)
+      // 1. App Launcher / Launchpad (Modern macOS Rocket Icon)
       DockIcon {
         visible: !dockConfig.preTasks || dockConfig.preTasks.showLauncher !== false
         baseSize: shelf.baseItemSize
@@ -212,12 +336,14 @@ PanelWindow {
         app: ({
           id: "omarchy.menu",
           name: "Launchpad / Apps",
-          icon: "view-app-grid-symbolic",
+          icon: dockWindow.iconsDir + "/launchpad.svg",
           gradientStart: "#3b82f6",
           gradientEnd: "#1d4ed8"
         })
         onClicked: Quickshell.execDetached(["omarchy-shell", "shell", "summon", "omarchy.menu"])
         onRightClicked: dockWindow.openSettings()
+        onHovered: function() { hideTimer.stop(); dockWindow.isDockHovered = true; }
+        onUnhovered: hideTimer.start()
       }
 
       // 2. Pinned Apps Row
@@ -238,6 +364,8 @@ PanelWindow {
 
           onClicked: dockWindow.launchOrActivate(modelData)
           onRightClicked: dockWindow.openSettings()
+          onHovered: function() { hideTimer.stop(); dockWindow.isDockHovered = true; }
+          onUnhovered: hideTimer.start()
         }
       }
 
@@ -249,7 +377,7 @@ PanelWindow {
         color: Qt.rgba(255, 255, 255, 0.22)
       }
 
-      // 4. Workspaces Indicator (Pre-task)
+      // 4. Mission Control / Workspaces (Modern Desktop Spaces Icon)
       DockIcon {
         visible: !dockConfig.preTasks || dockConfig.preTasks.showWorkspaces !== false
         baseSize: shelf.baseItemSize
@@ -258,16 +386,18 @@ PanelWindow {
         isRunning: true
         app: ({
           id: "workspaces",
-          name: "Mission Control / Workspaces (" + (Hyprland.focusedWorkspace ? Hyprland.focusedWorkspace.id : "1") + ")",
-          icon: "preferences-desktop-multitasking-symbolic",
+          name: "Mission Control (" + (Hyprland.focusedWorkspace ? Hyprland.focusedWorkspace.id : "1") + ")",
+          icon: dockWindow.iconsDir + "/workspaces.svg",
           gradientStart: "#ec4899",
           gradientEnd: "#be185d"
         })
         onClicked: Quickshell.execDetached(["hyprctl", "dispatch", "workspace", "+1"])
         onRightClicked: dockWindow.openSettings()
+        onHovered: function() { hideTimer.stop(); dockWindow.isDockHovered = true; }
+        onUnhovered: hideTimer.start()
       }
 
-      // 5. Activity Monitor (Pre-task)
+      // 5. Activity Monitor (Modern ECG Pulse Wave Icon)
       DockIcon {
         visible: !dockConfig.preTasks || dockConfig.preTasks.showActivityMonitor !== false
         baseSize: shelf.baseItemSize
@@ -276,15 +406,17 @@ PanelWindow {
         app: ({
           id: "stappmus.activity-monitor",
           name: "Activity Monitor",
-          icon: "utilities-system-monitor",
+          icon: dockWindow.iconsDir + "/activity-monitor.svg",
           gradientStart: "#10b981",
           gradientEnd: "#047857"
         })
         onClicked: Quickshell.execDetached(["omarchy-shell", "shell", "summon", "stappmus.activity-monitor"])
         onRightClicked: dockWindow.openSettings()
+        onHovered: function() { hideTimer.stop(); dockWindow.isDockHovered = true; }
+        onUnhovered: hideTimer.start()
       }
 
-      // 6. Plugin Manager (omaplug)
+      // 6. Plugin Store (Modern 3D Package Box Icon)
       DockIcon {
         visible: !dockConfig.preTasks || dockConfig.preTasks.showPluginManager !== false
         baseSize: shelf.baseItemSize
@@ -293,15 +425,17 @@ PanelWindow {
         app: ({
           id: "omaplug",
           name: "Plugin Store (Omaplug)",
-          icon: "package-x-generic",
+          icon: dockWindow.iconsDir + "/omaplug.svg",
           gradientStart: "#8b5cf6",
           gradientEnd: "#6d28d9"
         })
         onClicked: Quickshell.execDetached(["omarchy-shell", "shell", "summon", "omaplug"])
         onRightClicked: dockWindow.openSettings()
+        onHovered: function() { hideTimer.stop(); dockWindow.isDockHovered = true; }
+        onUnhovered: hideTimer.start()
       }
 
-      // 7. Dock Settings (Edit Mode)
+      // 7. Dock Settings (Modern Apple Metallic Gear Icon)
       DockIcon {
         visible: !dockConfig.preTasks || dockConfig.preTasks.showSettings !== false
         baseSize: shelf.baseItemSize
@@ -310,15 +444,17 @@ PanelWindow {
         app: ({
           id: "dock-settings",
           name: "Dock Customizer (Edit Apps)",
-          icon: "preferences-system",
+          icon: dockWindow.iconsDir + "/settings.svg",
           gradientStart: "#64748b",
           gradientEnd: "#334155"
         })
         onClicked: dockWindow.openSettings()
         onRightClicked: dockWindow.openSettings()
+        onHovered: function() { hideTimer.stop(); dockWindow.isDockHovered = true; }
+        onUnhovered: hideTimer.start()
       }
 
-      // 8. Trash (Pre-task)
+      // 8. Trash (Dynamic Empty vs Full Wastebasket Icon)
       DockIcon {
         visible: !dockConfig.preTasks || dockConfig.preTasks.showTrash !== false
         baseSize: shelf.baseItemSize
@@ -326,26 +462,15 @@ PanelWindow {
         maxMagnification: dockConfig.maxScale || 1.25
         app: ({
           id: "trash",
-          name: "Trash Bin",
-          icon: "user-trash",
+          name: dockWindow.isTrashFull ? "Trash (Items inside)" : "Trash (Empty)",
+          icon: dockWindow.isTrashFull ? (dockWindow.iconsDir + "/trash-full.svg") : (dockWindow.iconsDir + "/trash-empty.svg"),
           gradientStart: "#94a3b8",
           gradientEnd: "#475569"
         })
         onClicked: Quickshell.execDetached(["nautilus", "trash:///"])
         onRightClicked: dockWindow.openSettings()
-      }
-    }
-
-    // Right click on shelf background opens settings
-    MouseArea {
-      anchors.fill: parent
-      acceptedButtons: Qt.RightButton
-      cursorShape: Qt.ArrowCursor
-      z: -1
-      onClicked: function(mouse) {
-        if (mouse.button === Qt.RightButton) {
-          dockWindow.openSettings()
-        }
+        onHovered: function() { hideTimer.stop(); dockWindow.isDockHovered = true; }
+        onUnhovered: hideTimer.start()
       }
     }
   }

@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="canBody" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.35"/>
+      <stop offset="25%" stop-color="#ffffff" stop-opacity="0.60"/>
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="0.25"/>
+      <stop offset="85%" stop-color="#ffffff" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.30"/>
+    </linearGradient>
+    <linearGradient id="rimGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#cbd5e1"/>
+      <stop offset="50%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#94a3b8"/>
+    </linearGradient>
+    <linearGradient id="paperGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Crumpled Papers overflowing out of top -->
+  <polygon points="40,32 52,18 64,28 50,38" fill="url(#paperGrad)" stroke="#cbd5e1" stroke-width="1"/>
+  <polygon points="62,24 76,14 86,26 72,36" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+  <polygon points="50,28 66,20 78,32 60,40" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+  <circle cx="56" cy="26" r="3" fill="#cbd5e1" opacity="0.5"/>
+
+  <!-- Top Rim Ellipse -->
+  <ellipse cx="64" cy="34" rx="38" ry="12" fill="#334155" stroke="url(#rimGrad)" stroke-width="3"/>
+
+  <!-- More paper inside -->
+  <polygon points="36,36 46,26 58,35 48,44" fill="#ffffff"/>
+  <polygon points="68,36 82,26 92,38 78,44" fill="#f1f5f9"/>
+
+  <!-- Can Translucent Body -->
+  <path d="M 28 36 L 38 100 Q 64 112 90 100 L 100 36 Z" fill="url(#canBody)" stroke="#ffffff" stroke-width="1.8" stroke-opacity="0.6"/>
+
+  <!-- Vertical Rib Flutes -->
+  <line x1="42" y1="42" x2="48" y2="98" stroke="#ffffff" stroke-width="2" stroke-opacity="0.45"/>
+  <line x1="53" y1="44" x2="56" y2="103" stroke="#ffffff" stroke-width="2.5" stroke-opacity="0.6"/>
+  <line x1="64" y1="45" x2="64" y2="105" stroke="#ffffff" stroke-width="3" stroke-opacity="0.75"/>
+  <line x1="75" y1="44" x2="72" y2="103" stroke="#ffffff" stroke-width="2.5" stroke-opacity="0.6"/>
+  <line x1="86" y1="42" x2="80" y2="98" stroke="#ffffff" stroke-width="2" stroke-opacity="0.45"/>
+
+  <!-- Green Recycle Symbol -->
+  <g transform="translate(64, 72) scale(0.68) translate(-64, -72)">
+    <path d="M 64 48 L 74 62 L 67 62 C 67 68 71 73 78 74 L 75 79 C 66 78 61 71 61 62 L 54 62 Z" fill="#22c55e"/>
+    <path d="M 52 82 L 42 68 L 47 64 C 43 59 43 53 47 47 L 42 43 C 36 51 36 60 41 68 L 37 72 Z" fill="#16a34a"/>
+    <path d="M 82 78 L 84 62 L 78 65 C 81 59 79 53 74 48 L 78 44 C 85 50 88 59 84 68 L 90 66 Z" fill="#4ade80"/>
+  </g>
+</svg>

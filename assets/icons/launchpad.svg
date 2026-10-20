@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="rocketBody" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="60%" stop-color="#e2e8f0"/>
+      <stop offset="100%" stop-color="#cbd5e1"/>
+    </linearGradient>
+    <linearGradient id="rocketTip" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ef4444"/>
+      <stop offset="100%" stop-color="#dc2626"/>
+    </linearGradient>
+    <linearGradient id="rocketFlame" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="50%" stop-color="#f97316"/>
+      <stop offset="100%" stop-color="#ef4444"/>
+    </linearGradient>
+    <linearGradient id="windowGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Stars in background -->
+  <circle cx="28" cy="32" r="2.5" fill="#ffffff" opacity="0.8"/>
+  <circle cx="102" cy="78" r="2" fill="#ffffff" opacity="0.7"/>
+  <circle cx="92" cy="28" r="3" fill="#ffffff" opacity="0.9"/>
+  <circle cx="36" cy="88" r="2" fill="#ffffff" opacity="0.6"/>
+  <path d="M 88 38 L 90 44 L 96 46 L 90 48 L 88 54 L 86 48 L 80 46 L 86 44 Z" fill="#ffffff" opacity="0.75"/>
+
+  <!-- Exhaust Flame -->
+  <path d="M 44 84 Q 32 96 36 108 Q 48 104 60 92 Z" fill="url(#rocketFlame)"/>
+  <path d="M 42 86 Q 36 94 38 102 Q 46 100 54 92 Z" fill="#fef08a"/>
+
+  <!-- Left Fin -->
+  <path d="M 46 64 L 32 82 Q 42 86 52 80 Z" fill="#ef4444"/>
+
+  <!-- Right Fin -->
+  <path d="M 76 94 L 94 108 Q 98 98 92 88 Z" fill="#dc2626"/>
+
+  <!-- Main Fuselage -->
+  <path d="M 92 36 C 96 32 94 28 88 32 C 72 44 54 62 48 80 C 58 86 70 82 80 72 C 90 60 92 42 92 36 Z" fill="url(#rocketBody)"/>
+
+  <!-- Rocket Nose Tip -->
+  <path d="M 92 36 C 95 33 93 29 88 32 C 86 34 83 37 80 42 C 86 46 90 40 92 36 Z" fill="url(#rocketTip)"/>
+
+  <!-- Cockpit Window -->
+  <circle cx="72" cy="52" r="7.5" fill="#475569"/>
+  <circle cx="72" cy="52" r="5.5" fill="url(#windowGrad)"/>
+  <circle cx="70.5" cy="50.5" r="1.8" fill="#ffffff" opacity="0.8"/>
+</svg>

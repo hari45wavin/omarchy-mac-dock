@@ -35,14 +35,15 @@ fi
 
 # 2. Deploy Plugin Files
 echo -e "${COLOR_BOLD}[2/5] Installing plugin files to ${TARGET_PLUGIN_DIR}...${COLOR_RESET}"
-mkdir -p "${TARGET_PLUGIN_DIR}"
+mkdir -p "${TARGET_PLUGIN_DIR}/assets/icons"
 cp -f "${SCRIPT_DIR}/manifest.json" "${TARGET_PLUGIN_DIR}/"
 cp -f "${SCRIPT_DIR}/Dock.qml" "${TARGET_PLUGIN_DIR}/"
 cp -f "${SCRIPT_DIR}/DockIcon.qml" "${TARGET_PLUGIN_DIR}/"
 cp -f "${SCRIPT_DIR}/DockSettings.qml" "${TARGET_PLUGIN_DIR}/"
 cp -f "${SCRIPT_DIR}/DockModel.js" "${TARGET_PLUGIN_DIR}/"
 cp -f "${SCRIPT_DIR}/SettingsButton.qml" "${TARGET_PLUGIN_DIR}/"
-echo -e "${COLOR_GREEN}✓ Plugin files copied successfully.${COLOR_RESET}"
+cp -rf "${SCRIPT_DIR}/assets/icons/"* "${TARGET_PLUGIN_DIR}/assets/icons/"
+echo -e "${COLOR_GREEN}✓ Plugin files and modern icons copied successfully.${COLOR_RESET}"
 
 # 3. Deploy Default Configuration
 echo -e "${COLOR_BOLD}[3/5] Setting up configuration at ${CONFIG_FILE}...${COLOR_RESET}"

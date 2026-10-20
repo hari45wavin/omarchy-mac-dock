@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="topFace" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#c084fc"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <linearGradient id="leftFace" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#9333ea"/>
+      <stop offset="100%" stop-color="#6b21a8"/>
+    </linearGradient>
+    <linearGradient id="rightFace" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7e22ce"/>
+      <stop offset="100%" stop-color="#581c87"/>
+    </linearGradient>
+    <linearGradient id="tapeGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 3D Isometric Box Top Face -->
+  <polygon points="64,26 102,46 64,66 26,46" fill="url(#topFace)"/>
+
+  <!-- 3D Isometric Box Left Face -->
+  <polygon points="26,46 64,66 64,106 26,86" fill="url(#leftFace)"/>
+
+  <!-- 3D Isometric Box Right Face -->
+  <polygon points="64,66 102,46 102,86 64,106" fill="url(#rightFace)"/>
+
+  <!-- Top Blue Tape Ribbon -->
+  <polygon points="45,36 83,56 75,60 37,40" fill="url(#tapeGrad)" opacity="0.9"/>
+
+  <!-- Front Left Tape Ribbon -->
+  <polygon points="56,62 64,66 64,106 56,102" fill="url(#tapeGrad)" opacity="0.85"/>
+
+  <!-- Front Right Tape Ribbon -->
+  <polygon points="64,66 72,62 72,102 64,106" fill="url(#tapeGrad)" opacity="0.75"/>
+
+  <!-- Top Ribbon Knot / Bow Sparkle -->
+  <circle cx="64" cy="50" r="5" fill="#38bdf8"/>
+  <circle cx="64" cy="50" r="3" fill="#ffffff"/>
+
+  <!-- Sparkle Stars -->
+  <path d="M 28 30 L 30 35 L 35 37 L 30 39 L 28 44 L 26 39 L 21 37 L 26 35 Z" fill="#fde047"/>
+  <path d="M 100 32 L 101.5 35.5 L 105 37 L 101.5 38.5 L 100 42 L 98.5 38.5 L 95 37 L 98.5 35.5 Z" fill="#ffffff" opacity="0.85"/>
+</svg>

@@ -1,13 +1,16 @@
 function defaultConfig() {
+  var home = Quickshell.env("HOME");
+  var iconDir = home + "/.config/omarchy/plugins/omarchy-mac-dock/assets/icons";
   return {
     version: 1,
-    dockSize: 52,
+    dockSize: 44,
     magnification: true,
     maxScale: 1.25,
     glassOpacity: 0.45,
     reserveSpace: true,
     bottomMargin: 10,
     clickToMinimize: true,
+    autoHide: false,
     preTasks: {
       showLauncher: true,
       showWorkspaces: true,
@@ -21,7 +24,7 @@ function defaultConfig() {
         id: "org.gnome.Nautilus",
         name: "Finder",
         desktopFile: "org.gnome.Nautilus.desktop",
-        icon: "org.gnome.Nautilus",
+        icon: iconDir + "/finder.svg",
         exec: "nautilus",
         gradientStart: "#38bdf8",
         gradientEnd: "#0284c7"
@@ -93,7 +96,7 @@ function defaultConfig() {
         id: "omasettings",
         name: "System Settings",
         desktopFile: "omasettings.desktop",
-        icon: "/home/hariom_joshi/.config/omarchy/plugins/io.github.twiking.omasettings/icon.png",
+        icon: iconDir + "/settings.svg",
         exec: "omarchy-shell omasettings toggle",
         gradientStart: "#94a3b8",
         gradientEnd: "#475569"

@@ -12,7 +12,7 @@ Item {
   id: root
 
   property var app: ({})
-  property int baseSize: 52
+  property int baseSize: 44
   property real scaleFactor: 1.0
   property bool isRunning: false
   property bool isFocused: false
@@ -80,7 +80,7 @@ Item {
       anchors.topMargin: 3
       radius: root.baseSize * 0.22
       color: "black"
-      opacity: isHovered ? 0.35 : 0.18
+      opacity: isHovered ? 0.38 : 0.20
       scale: 0.94
       z: 0
     }
@@ -100,7 +100,7 @@ Item {
       }
 
       border.width: 1
-      border.color: Qt.rgba(255, 255, 255, isHovered ? 0.50 : 0.25)
+      border.color: Qt.rgba(255, 255, 255, isHovered ? 0.55 : 0.25)
 
       // Glossy Top Reflection
       Rectangle {
@@ -111,7 +111,7 @@ Item {
         radius: squircle.radius
         gradient: Gradient {
           orientation: Gradient.Vertical
-          GradientStop { position: 0.0; color: Qt.rgba(255, 255, 255, 0.32) }
+          GradientStop { position: 0.0; color: Qt.rgba(255, 255, 255, 0.35) }
           GradientStop { position: 1.0; color: Qt.rgba(255, 255, 255, 0.0) }
         }
       }
@@ -120,9 +120,9 @@ Item {
       Image {
         id: appImage
         anchors.centerIn: parent
-        width: Math.round(parent.width * 0.70)
-        height: Math.round(parent.height * 0.70)
-        sourceSize: Qt.size(Math.round(parent.width * 1.5), Math.round(parent.height * 1.5))
+        width: Math.round(parent.width * 0.72)
+        height: Math.round(parent.height * 0.72)
+        sourceSize: Qt.size(Math.round(parent.width * 2), Math.round(parent.height * 2))
         source: root.iconUrl
         fillMode: Image.PreserveAspectFit
         mipmap: true
@@ -182,28 +182,39 @@ Item {
     }
   }
 
-  // Floating Tooltip Pill (macOS style tooltip above icon)
+  // Floating High-Contrast macOS Tooltip Pill
   Rectangle {
     id: tooltip
     visible: isHovered
-    z: 100
+    z: 2000
     anchors.bottom: iconContainer.top
-    anchors.bottomMargin: 10
+    anchors.bottomMargin: 14
     anchors.horizontalCenter: parent.horizontalCenter
 
-    implicitWidth: tooltipLabel.implicitWidth + 16
-    implicitHeight: tooltipLabel.implicitHeight + 8
+    implicitWidth: tooltipLabel.implicitWidth + 20
+    implicitHeight: tooltipLabel.implicitHeight + 10
     radius: 7
 
-    color: Qt.rgba(0.08, 0.12, 0.18, 0.90)
+    // Deep high-contrast background with solid opacity so it never merges with apps above
+    color: "#18181b"
     border.width: 1
-    border.color: Qt.rgba(255, 255, 255, 0.22)
+    border.color: Qt.rgba(255, 255, 255, 0.35)
+
+    // Shadow beneath tooltip
+    Rectangle {
+      anchors.fill: parent
+      anchors.topMargin: 2
+      radius: parent.radius
+      color: "black"
+      opacity: 0.65
+      z: -1
+    }
 
     Text {
       id: tooltipLabel
       anchors.centerIn: parent
       text: root.appName
-      color: "white"
+      color: "#ffffff"
       font.pixelSize: Style.font.caption
       font.bold: true
       font.family: Style.font.family

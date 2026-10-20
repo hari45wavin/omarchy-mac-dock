@@ -43,7 +43,7 @@ PanelWindow {
   Rectangle {
     id: card
     width: Math.min(parent.width - 40, 840)
-    height: Math.min(parent.height - 60, 660)
+    height: Math.min(parent.height - 60, 680)
     anchors.centerIn: parent
     radius: 16
     color: Util.alpha(Commons.Color.background, 0.96)
@@ -525,12 +525,12 @@ PanelWindow {
 
             Repeater {
               model: [
-                { key: "showLauncher", label: "Launchpad / App Menu", desc: "macOS 3x3 grid launcher for system apps" },
+                { key: "showLauncher", label: "Launchpad / App Menu", desc: "macOS modern rocket launcher for applications" },
                 { key: "showWorkspaces", label: "Mission Control / Workspaces", desc: "Displays current Hyprland workspace indicator" },
                 { key: "showActivityMonitor", label: "Activity Monitor", desc: "Quick launcher for CPU & memory monitor" },
                 { key: "showPluginManager", label: "Plugin Store (Omaplug)", desc: "Quick launcher for Omarchy plugin manager" },
                 { key: "showSettings", label: "Dock Customizer Gear", desc: "Direct gear shortcut to edit dock layout anytime" },
-                { key: "showTrash", label: "Trash Bin", desc: "macOS Trash shortcut on the right dock edge" }
+                { key: "showTrash", label: "Trash Bin", desc: "macOS Trash shortcut with empty/full states" }
               ]
 
               Rectangle {
@@ -590,7 +590,7 @@ PanelWindow {
 
         ColumnLayout {
           anchors.fill: parent
-          spacing: 14
+          spacing: 12
 
           Text {
             text: "Dock Appearance & Window Behavior"
@@ -603,7 +603,7 @@ PanelWindow {
           // 1. Icon Size Preset Buttons
           Rectangle {
             Layout.fillWidth: true
-            height: 72
+            height: 70
             radius: 10
             color: Qt.rgba(255, 255, 255, 0.06)
 
@@ -614,17 +614,17 @@ PanelWindow {
               ColumnLayout {
                 Layout.fillWidth: true
                 Text { text: "Base Dock Icon Size"; color: "white"; font.bold: true; font.pixelSize: Style.font.body }
-                Text { text: "Current size: " + (settingsWindow.dockConfig.dockSize || 52) + "px (Live Preview)"; color: Qt.rgba(255, 255, 255, 0.6); font.pixelSize: Style.font.caption }
+                Text { text: "Current size: " + (settingsWindow.dockConfig.dockSize || 44) + "px (Live Preview)"; color: Qt.rgba(255, 255, 255, 0.6); font.pixelSize: Style.font.caption }
               }
 
               RowLayout {
                 spacing: 8
                 Repeater {
                   model: [
-                    { label: "Compact (38px)", size: 38 },
-                    { label: "Small (44px)", size: 44 },
-                    { label: "Medium (52px)", size: 52 },
-                    { label: "Large (62px)", size: 62 },
+                    { label: "Compact (36px)", size: 36 },
+                    { label: "Small (42px)", size: 42 },
+                    { label: "Medium (50px)", size: 50 },
+                    { label: "Large (60px)", size: 60 },
                     { label: "XL (72px)", size: 72 }
                   ]
 
@@ -645,7 +645,54 @@ PanelWindow {
             }
           }
 
-          // 2. Click to Minimize Active App
+          // 2. Auto-Hide Dock (Intellihide)
+          Rectangle {
+            Layout.fillWidth: true
+            height: 60
+            radius: 10
+            color: Qt.rgba(255, 255, 255, 0.06)
+
+            RowLayout {
+              anchors.fill: parent
+              anchors.margins: 14
+
+              ColumnLayout {
+                Layout.fillWidth: true
+                Text { text: "Auto-Hide Dock When Windows are Open"; color: "white"; font.bold: true; font.pixelSize: Style.font.body }
+                Text { text: "Smoothly hides the dock when apps are open; moves back up when cursor hovers bottom edge"; color: Qt.rgba(255, 255, 255, 0.6); font.pixelSize: Style.font.caption }
+              }
+
+              Rectangle {
+                width: 44
+                height: 24
+                radius: 12
+                color: settingsWindow.dockConfig.autoHide ? Commons.Color.accent : Qt.rgba(255, 255, 255, 0.2)
+
+                Rectangle {
+                  width: 20
+                  height: 20
+                  radius: 10
+                  color: "white"
+                  anchors.verticalCenter: parent.verticalCenter
+                  x: settingsWindow.dockConfig.autoHide ? 22 : 2
+                  Behavior on x { NumberAnimation { duration: 150 } }
+                }
+
+                MouseArea {
+                  anchors.fill: parent
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: {
+                    var c = Util.cloneJson(settingsWindow.dockConfig)
+                    c.autoHide = !c.autoHide
+                    settingsWindow.dockConfig = c
+                    settingsWindow.configLivePreview(c)
+                  }
+                }
+              }
+            }
+          }
+
+          // 3. Click to Minimize Active App
           Rectangle {
             Layout.fillWidth: true
             height: 60
@@ -692,7 +739,7 @@ PanelWindow {
             }
           }
 
-          // 3. Hover Magnification Toggle
+          // 4. Hover Magnification Toggle
           Rectangle {
             Layout.fillWidth: true
             height: 60
@@ -739,7 +786,7 @@ PanelWindow {
             }
           }
 
-          // 4. Reserve Screen Space for Windows
+          // 5. Reserve Screen Space for Windows
           Rectangle {
             Layout.fillWidth: true
             height: 60
