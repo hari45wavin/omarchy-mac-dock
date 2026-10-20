@@ -1,0 +1,35 @@
+name: Validate & Lint
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Validate JSON Files
+        run: |
+          python3 -m json.tool manifest.json > /dev/null
+          python3 -m json.tool config.default.json > /dev/null
+          echo "✓ All JSON files are valid syntax."
+
+      - name: Validate Shell Scripts
+        run: |
+          bash -n install.sh
+          bash -n uninstall.sh
+          echo "✓ Shell scripts passed bash syntax checks."
+
+      - name: Check QML File Integrity
+        run: |
+          test -f Dock.qml
+          test -f DockIcon.qml
+          test -f DockSettings.qml
+          test -f DockModel.js
+          test -f SettingsButton.qml
+          echo "✓ All core QML & JS components exist."

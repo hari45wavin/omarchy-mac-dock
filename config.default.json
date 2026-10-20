@@ -1,0 +1,101 @@
+{
+  "version": 1,
+  "dockSize": 48,
+  "magnification": true,
+  "maxScale": 1.25,
+  "glassOpacity": 0.45,
+  "reserveSpace": true,
+  "bottomMargin": 10,
+  "clickToMinimize": true,
+  "preTasks": {
+    "showLauncher": true,
+    "showWorkspaces": true,
+    "showActivityMonitor": true,
+    "showPluginManager": true,
+    "showSettings": true,
+    "showTrash": true
+  },
+  "pinnedApps": [
+    {
+      "id": "org.gnome.Nautilus",
+      "name": "Finder",
+      "desktopFile": "org.gnome.Nautilus.desktop",
+      "icon": "org.gnome.Nautilus",
+      "exec": "nautilus",
+      "gradientStart": "#38bdf8",
+      "gradientEnd": "#0284c7"
+    },
+    {
+      "id": "brave-browser",
+      "name": "Brave Browser",
+      "desktopFile": "brave-browser.desktop",
+      "icon": "brave-desktop",
+      "exec": "brave",
+      "gradientStart": "#fb923c",
+      "gradientEnd": "#ea580c"
+    },
+    {
+      "id": "antigravity",
+      "name": "Antigravity IDE",
+      "desktopFile": "antigravity.desktop",
+      "icon": "antigravity",
+      "exec": "antigravity",
+      "gradientStart": "#818cf8",
+      "gradientEnd": "#4f46e5"
+    },
+    {
+      "id": "foot",
+      "name": "Terminal",
+      "desktopFile": "foot.desktop",
+      "icon": "foot",
+      "exec": "foot",
+      "gradientStart": "#334155",
+      "gradientEnd": "#0f172a"
+    },
+    {
+      "id": "notion",
+      "name": "Notion",
+      "desktopFile": "notion.desktop",
+      "icon": "notion",
+      "exec": "notion-app",
+      "gradientStart": "#475569",
+      "gradientEnd": "#1e293b"
+    },
+    {
+      "id": "md.obsidian.Obsidian",
+      "name": "Obsidian",
+      "desktopFile": "obsidian.desktop",
+      "icon": "obsidian",
+      "exec": "obsidian",
+      "gradientStart": "#a855f7",
+      "gradientEnd": "#6b21a8"
+    },
+    {
+      "id": "spotify",
+      "name": "Spotify",
+      "desktopFile": "spotify.desktop",
+      "icon": "spotify-client",
+      "exec": "spotify",
+      "gradientStart": "#22c55e",
+      "gradientEnd": "#15803d"
+    },
+    {
+      "id": "WhatsApp",
+      "name": "WhatsApp",
+      "desktopFile": "WhatsApp.desktop",
+      "icon": "whatsapp",
+      "exec": "omarchy-launch-webapp https://web.whatsapp.com/",
+      "gradientStart": "#10b981",
+      "gradientEnd": "#059669"
+    },
+    {
+      "id": "omasettings",
+      "name": "System Settings",
+      "desktopFile": "omasettings.desktop",
+      "icon": "/home/hariom_joshi/.config/omarchy/plugins/io.github.twiking.omasettings/icon.png",
+      "exec": "omarchy-shell omasettings toggle",
+      "gradientStart": "#94a3b8",
+      "gradientEnd": "#475569"
+    }
+  ]
+}
