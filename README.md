@@ -13,7 +13,7 @@
 <br/>
 
 <p align="center">
-  <img src="assets/dock-preview.png" alt="Omarchy macOS Dock Shelf Preview" width="940"/>
+  <img src="assets/preview.png" alt="Omarchy macOS Dock Vitrine Showcase Banner" width="980"/>
 </p>
 
 *Elevate your Linux desktop with an ultra-smooth, translucent frosted-glass macOS dock built natively for Omarchy on Wayland.*

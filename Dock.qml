@@ -24,9 +24,31 @@ PanelWindow {
   // Auto-hide & Hover State Tracking
   property bool isDockHovered: false
   readonly property bool autoHideEnabled: dockConfig.autoHide === true
-  readonly property bool hasActiveWindows: ToplevelManager.activeToplevel !== null
   readonly property bool isSettingsOpen: settingsPanel !== null && settingsPanel.visible
-  readonly property bool shouldHide: autoHideEnabled && hasActiveWindows && !isDockHovered && !isSettingsOpen
+
+  // Accurate open app detection: stays true while apps are open, even if clicking empty desktop
+  readonly property bool hasOpenApps: {
+    try {
+      if (Hyprland.focusedWorkspace && Hyprland.focusedWorkspace.toplevels) {
+        if (Hyprland.focusedWorkspace.toplevels.values.length > 0) return true
+      }
+    } catch (e1) {}
+
+    try {
+      var list = dockWindow.toplevelsList || []
+      for (var i = 0; i < list.length; i++) {
+        var top = list[i]
+        if (top && !top.minimized) {
+          var appId = String(top.appId || "").toLowerCase()
+          if (appId !== "hyprlock" && appId !== "wlogout") return true
+        }
+      }
+    } catch (e2) {}
+
+    return false
+  }
+
+  readonly property bool shouldHide: autoHideEnabled && hasOpenApps && !isDockHovered && !isSettingsOpen
 
   // Trash Full State Tracking
   property bool isTrashFull: false
@@ -58,11 +80,25 @@ PanelWindow {
     id: shelfArea
     anchors.horizontalCenter: shelf.horizontalCenter
     anchors.bottom: parent.bottom
-    width: shelf.width + 40
-    height: shelf.height + (dockConfig.bottomMargin || 10) + 54
+    width: shelf.width + 60
+    height: shelf.height + (dockConfig.bottomMargin || 10) + 64
+
+    MouseArea {
+      id: shelfContainerHover
+      anchors.fill: parent
+      hoverEnabled: true
+      acceptedButtons: Qt.NoButton
+      onEntered: {
+        hideTimer.stop()
+        dockWindow.isDockHovered = true
+      }
+      onExited: {
+        hideTimer.restart()
+      }
+    }
   }
 
-  // Hyprland / Wayland Toplevels Tracking for Running Dots
+  // Hyprland / Wayland Toplevels Tracking for Running Dots & Workspace presence
   function updateToplevels() {
     try {
       toplevelsList = ToplevelManager.toplevels.values || []
@@ -79,6 +115,16 @@ PanelWindow {
   Connections {
     target: ToplevelManager
     function onActiveToplevelChanged() { dockWindow.updateToplevels() }
+  }
+
+  Connections {
+    target: Hyprland.workspaces
+    function onValuesChanged() { dockWindow.updateToplevels() }
+  }
+
+  Connections {
+    target: Hyprland
+    function onFocusedWorkspaceChanged() { dockWindow.updateToplevels() }
   }
 
   // Trash State Monitor
@@ -226,9 +272,11 @@ PanelWindow {
   // Auto-Hide Delay Timers
   Timer {
     id: hideTimer
-    interval: 350
+    interval: 400
     onTriggered: {
-      if (!shelfHoverArea.containsMouse && !triggerHoverArea.containsMouse) {
+      var inShelf = shelfContainerHover.containsMouse || shelfHoverArea.containsMouse
+      var inTrigger = triggerHoverArea.containsMouse
+      if (!inShelf && !inTrigger && !dockWindow.isSettingsOpen) {
         dockWindow.isDockHovered = false
       }
     }
@@ -240,7 +288,7 @@ PanelWindow {
     anchors.bottom: parent.bottom
     anchors.left: parent.left
     anchors.right: parent.right
-    height: 12
+    height: 14
     z: 9999
 
     MouseArea {
@@ -250,6 +298,9 @@ PanelWindow {
       onEntered: {
         hideTimer.stop()
         dockWindow.isDockHovered = true
+      }
+      onExited: {
+        hideTimer.restart()
       }
     }
   }

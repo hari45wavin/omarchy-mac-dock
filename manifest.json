@@ -2,10 +2,11 @@
   "schemaVersion": 1,
   "id": "omarchy-mac-dock",
   "name": "macOS Dock",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "Hariom Joshi",
   "license": "MIT",
-  "description": "macOS-style floating dock for Omarchy Linux with colorful squircle app icons, running task indicators, magnification, pre-task integrations, and interactive app management.",
+  "preview": "preview.png",
+  "description": "macOS-style floating dock for Omarchy Linux with colorful squircle app icons, running task indicators, parabolic magnification, intellihide, pre-task integrations, and interactive app management.",
   "kinds": [
     "overlay",
     "bar-widget"
