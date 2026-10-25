@@ -31,6 +31,48 @@ PanelWindow {
   property real mouseShelfX: -9999
   property bool isShelfHovered: false
   readonly property var shelfItem: shelf
+  readonly property var layoutItem: dockLayout
+
+  property bool ignoreDiskChanges: false
+
+  function updateHover(shelfX) {
+    exitTimer.stop()
+    triggerDismissTimer.stop()
+    hideTimer.stop()
+    mouseShelfX = shelfX
+    isShelfHovered = true
+    isDockHovered = true
+  }
+
+  function notifyHoverExit() {
+    exitTimer.restart()
+    hideTimer.restart()
+  }
+
+  Timer {
+    id: exitTimer
+    interval: 80
+    onTriggered: {
+      dockWindow.isShelfHovered = false
+      dockWindow.mouseShelfX = -9999
+    }
+  }
+
+  Timer {
+    id: triggerDismissTimer
+    interval: 1200
+    onTriggered: {
+      if (!dockWindow.isShelfHovered && !shelfHoverArea.containsMouse && !shelfContainerHover.containsMouse) {
+        dockWindow.isDockHovered = false
+      }
+    }
+  }
+
+  Timer {
+    id: saveCooldown
+    interval: 1500
+    onTriggered: dockWindow.ignoreDiskChanges = false
+  }
 
   // Auto-hide & Hover State Tracking
   property bool isDockHovered: false
@@ -41,7 +83,7 @@ PanelWindow {
   readonly property bool hasOpenAppsOnWorkspace: {
     try {
       if (Hyprland.focusedWorkspace) {
-        if (Hyprland.focusedWorkspace.windows > 0) return true
+        return (Hyprland.focusedWorkspace.windows > 0)
       }
     } catch (e1) {}
 
@@ -111,7 +153,7 @@ PanelWindow {
         dockWindow.isDockHovered = true
       }
       onExited: {
-        hideTimer.restart()
+        dockWindow.notifyHoverExit()
       }
     }
   }
@@ -205,8 +247,7 @@ PanelWindow {
 
   // Native Config Load and Save using Quickshell FileView
   function loadConfig() {
-    if (isWritingConfig) {
-      isWritingConfig = false
+    if (dockWindow.ignoreDiskChanges) {
       return
     }
     if (configFileView.loaded) {
@@ -233,7 +274,8 @@ PanelWindow {
 
   function saveConfig(newConfig) {
     dockConfig = newConfig
-    isWritingConfig = true
+    dockWindow.ignoreDiskChanges = true
+    saveCooldown.restart()
     updateToplevels()
     try {
       configFileView.setText(JSON.stringify(newConfig, null, 2) + "\n")
@@ -254,7 +296,11 @@ PanelWindow {
     atomicWrites: true
     printErrors: false
     onLoaded: dockWindow.loadConfig()
-    onFileChanged: reload()
+    onFileChanged: {
+      if (!dockWindow.ignoreDiskChanges) {
+        reload()
+      }
+    }
     onLoadFailed: function(error) {
       // Keep in-memory config intact
     }
@@ -396,9 +442,9 @@ PanelWindow {
   Item {
     id: triggerHotspot
     anchors.bottom: parent.bottom
-    anchors.left: parent.left
-    anchors.right: parent.right
-    height: 18
+    anchors.horizontalCenter: parent.horizontalCenter
+    width: Math.max(shelf.width + 120, 500)
+    height: 8
     z: 9999
 
     MouseArea {
@@ -406,11 +452,11 @@ PanelWindow {
       anchors.fill: parent
       hoverEnabled: true
       onEntered: {
-        hideTimer.stop()
         dockWindow.isDockHovered = true
+        dockWindow.triggerDismissTimer.restart()
       }
       onExited: {
-        hideTimer.restart()
+        dockWindow.triggerDismissTimer.restart()
       }
     }
   }
@@ -431,13 +477,8 @@ PanelWindow {
     readonly property int baseItemSize: dockConfig.dockSize || 44
 
     height: baseItemSize + 16
-    // Dynamic shelf width that expands smoothly with parabolic icon wave
     width: dockLayout.width + 28
     radius: height / 2
-
-    Behavior on width {
-      NumberAnimation { duration: 110; easing.type: Easing.OutQuad }
-    }
 
     // Omarchy theme aware translucent background
     color: Util.alpha(Commons.Color.background, dockConfig.glassOpacity || 0.45)
@@ -473,20 +514,13 @@ PanelWindow {
       hoverEnabled: true
       acceptedButtons: Qt.RightButton
       onEntered: {
-        hideTimer.stop()
-        dockWindow.isDockHovered = true
-        dockWindow.isShelfHovered = true
+        dockWindow.updateHover(mouse.x)
       }
       onPositionChanged: function(mouse) {
-        dockWindow.mouseShelfX = mouse.x
-        dockWindow.isShelfHovered = true
-        hideTimer.stop()
-        dockWindow.isDockHovered = true
+        dockWindow.updateHover(mouse.x)
       }
       onExited: {
-        dockWindow.isShelfHovered = false
-        dockWindow.mouseShelfX = -9999
-        hideTimer.restart()
+        dockWindow.notifyHoverExit()
       }
       onClicked: function(mouse) {
         if (mouse.button === Qt.RightButton) {

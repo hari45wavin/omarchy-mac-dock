@@ -22,20 +22,17 @@ Item {
 
   signal clicked()
   signal rightClicked(real mouseX, real mouseY, real screenCenterX)
-  signal hovered(real mouseX)
-  signal unhovered()
 
-  // Dynamic width: expands physically so neighboring icons gracefully make room during wave magnification
-  width: Math.round(baseSize + (iconContainer.scale - 1.0) * baseSize * 0.38)
+  // Stable fixed slot size: avoids exponential layout thrashing and stutter
+  width: baseSize
   height: baseSize + 8
   implicitWidth: width
   implicitHeight: height
   Layout.preferredWidth: width
   Layout.preferredHeight: height
 
-  Behavior on width {
-    NumberAnimation { duration: 110; easing.type: Easing.OutQuad }
-  }
+  // Dynamically raise z-index of magnified icon so it renders cleanly above neighbors
+  z: Math.round(computedScale * 100)
 
   readonly property string appName: String(app.name || app.id || "App")
   readonly property string iconName: String(app.icon || "")
@@ -70,33 +67,33 @@ Item {
     return false
   }
 
-  readonly property bool isHovered: hoverArea.containsMouse
-
-  // Continuous Parabolic Wave Magnification (Reverse-engineered from master-wayne7/macos_dock)
+  // Exact live horizontal center relative to shelf floor (pure reactive arithmetic; never goes stale)
   readonly property real centerInShelf: {
-    if (!dockWindow || !dockWindow.shelfItem) return 0
-    var pt = root.mapToItem(dockWindow.shelfItem, root.width / 2, 0)
-    return pt ? pt.x : 0
+    if (!dockWindow || !dockWindow.layoutItem) return 0
+    return dockWindow.layoutItem.x + root.x + (root.baseSize / 2)
   }
 
   readonly property real distToMouse: (dockWindow && dockWindow.isShelfHovered) ? Math.abs(dockWindow.mouseShelfX - centerInShelf) : 9999
-  readonly property real hoverRadius: root.baseSize * 2.1
+  readonly property real hoverRadius: root.baseSize * 2.3
   readonly property real normDist: distToMouse / hoverRadius
 
+  // Smooth cosine parabolic bell-curve with graceful exponential decay
   readonly property real waveInfluence: {
     if (!dockWindow || !dockWindow.isShelfHovered || normDist >= 1.0) return 0.0
-    // Parabolic bell curve with center boost
-    var inf = Math.max(0.0, 1.0 - Math.pow(normDist * 1.45, 2))
-    if (normDist < 0.5) {
-      var centerBoost = 1.0 - (normDist / 0.5)
-      inf = Math.max(inf, centerBoost)
-    }
-    return inf
+    var c = Math.cos(normDist * Math.PI * 0.5)
+    return Math.pow(c, 1.6)
   }
 
-  readonly property real computedScale: {
+  readonly property real targetScale: {
     if (!root.magnificationEnabled || !dockWindow || !dockWindow.isShelfHovered) return 1.0
     return 1.0 + (root.maxMagnification - 1.0) * waveInfluence
+  }
+
+  // Instant 120 FPS cursor tracking while hovering (0ms latency), smooth 140ms ease-out on exit
+  property real computedScale: targetScale
+  Behavior on computedScale {
+    enabled: !dockWindow || !dockWindow.isShelfHovered
+    NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
   }
 
   // Authentic macOS App Launch Bounce Animation
@@ -125,9 +122,9 @@ Item {
     loops: 3
     onFinished: root.isBouncing = false
 
-    NumberAnimation { target: bounceOffset; property: "y"; to: -22; duration: 160; easing.type: Easing.OutQuad }
+    NumberAnimation { target: bounceOffset; property: "y"; to: -24; duration: 160; easing.type: Easing.OutQuad }
     NumberAnimation { target: bounceOffset; property: "y"; to: 0; duration: 140; easing.type: Easing.InQuad }
-    NumberAnimation { target: bounceOffset; property: "y"; to: -13; duration: 120; easing.type: Easing.OutQuad }
+    NumberAnimation { target: bounceOffset; property: "y"; to: -14; duration: 120; easing.type: Easing.OutQuad }
     NumberAnimation { target: bounceOffset; property: "y"; to: 0; duration: 100; easing.type: Easing.InQuad }
     NumberAnimation { target: bounceOffset; property: "y"; to: -6; duration: 80; easing.type: Easing.OutQuad }
     NumberAnimation { target: bounceOffset; property: "y"; to: 0; duration: 70; easing.type: Easing.InQuad }
@@ -147,17 +144,10 @@ Item {
       height: root.baseSize
       anchors.horizontalCenter: parent.horizontalCenter
       anchors.bottom: parent.bottom
-      anchors.bottomMargin: Math.round(6 + (scale - 1.0) * root.baseSize * 0.48)
+      anchors.bottomMargin: Math.round(6 + (root.computedScale - 1.0) * root.baseSize * 0.45)
 
       scale: root.computedScale
       transformOrigin: Item.Bottom
-
-      Behavior on scale {
-        NumberAnimation { duration: 110; easing.type: Easing.OutQuad }
-      }
-      Behavior on anchors.bottomMargin {
-        NumberAnimation { duration: 110; easing.type: Easing.OutQuad }
-      }
 
       // Ambient Drop Shadow
       Rectangle {
@@ -165,7 +155,7 @@ Item {
         anchors.topMargin: 3
         radius: root.baseSize * 0.22
         color: "black"
-        opacity: isHovered ? 0.38 : 0.20
+        opacity: root.isDirectlyHovered ? 0.38 : 0.20
         scale: 0.94
         z: 0
       }
@@ -178,11 +168,10 @@ Item {
         clip: !root.isFullAppArtwork
         z: 1
 
-        color: root.isFullAppArtwork ? "transparent" : "transparent"
-
+        color: "transparent"
         gradient: root.isFullAppArtwork ? null : fallbackGradient
         border.width: root.isFullAppArtwork ? 0 : 1
-        border.color: Qt.rgba(255, 255, 255, isHovered ? 0.55 : 0.25)
+        border.color: Qt.rgba(255, 255, 255, root.isDirectlyHovered ? 0.55 : 0.25)
 
         Gradient {
           id: fallbackGradient
@@ -252,33 +241,33 @@ Item {
     }
   }
 
-  // Mouse Interaction
+  readonly property bool isDirectlyHovered: clickArea.containsMouse || (dockWindow && dockWindow.isShelfHovered && normDist < 0.32)
+
+  // Direct click and coordinate forwarding (does NOT steal or kill shelf hover)
   MouseArea {
-    id: hoverArea
+    id: clickArea
     anchors.fill: parent
     hoverEnabled: true
     acceptedButtons: Qt.LeftButton | Qt.RightButton
     cursorShape: Qt.PointingHandCursor
 
-    onEntered: {
-      updateShelfMouse(mouseX, mouseY)
-      root.hovered(mouseX)
+    onPositionChanged: function(mouse) {
+      if (dockWindow && typeof dockWindow.updateHover === "function") {
+        var sX = dockWindow.layoutItem.x + root.x + mouse.x
+        dockWindow.updateHover(sX)
+      }
     }
 
-    onPositionChanged: function(mouse) {
-      updateShelfMouse(mouse.x, mouse.y)
-      root.hovered(mouse.x)
+    onEntered: {
+      if (dockWindow && typeof dockWindow.updateHover === "function") {
+        var sX = dockWindow.layoutItem.x + root.x + (root.baseSize / 2)
+        dockWindow.updateHover(sX)
+      }
     }
 
     onExited: {
-      root.unhovered()
-    }
-
-    function updateShelfMouse(mx, my) {
-      if (dockWindow && dockWindow.shelfItem) {
-        var pt = root.mapToItem(dockWindow.shelfItem, mx, my)
-        dockWindow.mouseShelfX = pt.x
-        dockWindow.isShelfHovered = true
+      if (dockWindow && typeof dockWindow.notifyHoverExit === "function") {
+        dockWindow.notifyHoverExit()
       }
     }
 
@@ -295,10 +284,10 @@ Item {
   // Floating High-Contrast macOS Tooltip Pill
   Rectangle {
     id: tooltip
-    visible: isHovered && (!dockWindow.menuPanel || !dockWindow.menuPanel.visible)
+    visible: root.isDirectlyHovered && (!dockWindow.menuPanel || !dockWindow.menuPanel.visible)
     z: 9999
-    anchors.bottom: bounceOffset.top
-    anchors.bottomMargin: 14
+    anchors.bottom: root.top
+    anchors.bottomMargin: Math.round(16 + (root.computedScale - 1.0) * root.baseSize * 1.1)
     anchors.horizontalCenter: parent.horizontalCenter
 
     implicitWidth: tooltipLabel.implicitWidth + 20

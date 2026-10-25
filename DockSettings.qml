@@ -545,9 +545,9 @@ PanelWindow {
                 spacing: 8
                 Repeater {
                   model: [
-                    { label: "Compact (36px)", size: 36 },
-                    { label: "Small (42px)", size: 42 },
-                    { label: "Medium (50px)", size: 50 },
+                    { label: "Small (36px)", size: 36 },
+                    { label: "Normal (44px)", size: 44 },
+                    { label: "Medium (52px)", size: 52 },
                     { label: "Large (60px)", size: 60 },
                     { label: "XL (72px)", size: 72 }
                   ]
