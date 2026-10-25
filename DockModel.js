@@ -5,11 +5,13 @@ function defaultConfig() {
     version: 1,
     dockSize: 44,
     magnification: true,
-    maxScale: 1.25,
+    maxScale: 1.35,
     glassOpacity: 0.45,
     reserveSpace: true,
     bottomMargin: 10,
     clickToMinimize: true,
+    bounceOnLaunch: true,
+    showRecentApps: true,
     autoHide: false,
     preTasks: {
       showLauncher: true,
@@ -146,6 +148,17 @@ function findMatchingToplevel(toplevels, app) {
   return null;
 }
 
+function findAllMatchingToplevels(toplevels, app) {
+  if (!toplevels || !Array.isArray(toplevels)) return [];
+  var matches = [];
+  for (var i = 0; i < toplevels.length; i++) {
+    if (matchesToplevel(toplevels[i], app)) {
+      matches.push(toplevels[i]);
+    }
+  }
+  return matches;
+}
+
 function isAppRunning(toplevels, app) {
   return findMatchingToplevel(toplevels, app) !== null;
 }
@@ -153,6 +166,102 @@ function isAppRunning(toplevels, app) {
 function isAppFocused(toplevels, activeToplevel, app) {
   if (!activeToplevel) return false;
   return matchesToplevel(activeToplevel, app);
+}
+
+function isAppPinned(config, app) {
+  if (!config || !config.pinnedApps || !app) return false;
+  var targetId = String(app.id || "").toLowerCase();
+  for (var i = 0; i < config.pinnedApps.length; i++) {
+    var p = config.pinnedApps[i];
+    if (String(p.id || "").toLowerCase() === targetId) return true;
+    if (matchesToplevel(app, p)) return true;
+  }
+  return false;
+}
+
+function togglePinApp(config, app) {
+  if (!config) return config;
+  var newConfig = JSON.parse(JSON.stringify(config));
+  if (!newConfig.pinnedApps) newConfig.pinnedApps = [];
+
+  var existingIndex = -1;
+  var targetId = String(app.id || "").toLowerCase();
+  for (var i = 0; i < newConfig.pinnedApps.length; i++) {
+    var p = newConfig.pinnedApps[i];
+    if (String(p.id || "").toLowerCase() === targetId || matchesToplevel(app, p)) {
+      existingIndex = i;
+      break;
+    }
+  }
+
+  if (existingIndex !== -1) {
+    // Unpin
+    newConfig.pinnedApps.splice(existingIndex, 1);
+  } else {
+    // Pin to dock
+    var grad = defaultGradients(newConfig.pinnedApps.length);
+    newConfig.pinnedApps.push({
+      id: app.id || app.name || "app",
+      name: app.name || app.id || "Application",
+      desktopFile: app.desktopFile || (app.id ? app.id + ".desktop" : ""),
+      icon: app.icon || app.id || "",
+      exec: app.exec || "",
+      gradientStart: app.gradientStart || grad.start,
+      gradientEnd: app.gradientEnd || grad.end
+    });
+  }
+
+  return newConfig;
+}
+
+function getUnpinnedRunningApps(toplevels, pinnedApps) {
+  if (!toplevels || !Array.isArray(toplevels)) return [];
+  var pinned = pinnedApps || [];
+  var unpinned = [];
+  var seenIds = {};
+
+  for (var i = 0; i < toplevels.length; i++) {
+    var top = toplevels[i];
+    if (!top) continue;
+    var rawAppId = String(top.appId || "").trim();
+    if (!rawAppId) continue;
+    var lowerId = rawAppId.toLowerCase();
+    
+    // Ignore desktop layer-shell/system services
+    if (lowerId === "hyprlock" || lowerId === "wlogout" || lowerId === "quickshell" || lowerId === "omarchy-mac-dock" || lowerId === "screensaver") continue;
+
+    // Check if matches any pinned app
+    var isPinned = false;
+    for (var p = 0; p < pinned.length; p++) {
+      if (matchesToplevel(top, pinned[p])) {
+        isPinned = true;
+        break;
+      }
+    }
+
+    if (!isPinned && !seenIds[lowerId]) {
+      seenIds[lowerId] = true;
+      var cleanName = rawAppId;
+      if (cleanName.indexOf(".") !== -1) {
+        var segs = cleanName.split(".");
+        cleanName = segs[segs.length - 1];
+      }
+      cleanName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
+      var grad = defaultGradients(unpinned.length + 3);
+
+      unpinned.push({
+        id: rawAppId,
+        name: cleanName,
+        icon: rawAppId,
+        desktopFile: rawAppId + ".desktop",
+        isUnpinnedRunning: true,
+        gradientStart: grad.start,
+        gradientEnd: grad.end
+      });
+    }
+  }
+
+  return unpinned;
 }
 
 function defaultGradients(index) {

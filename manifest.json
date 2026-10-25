@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "omarchy-mac-dock",
   "name": "macOS Dock",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "Hariom Joshi",
   "license": "MIT",
   "preview": "preview.png",

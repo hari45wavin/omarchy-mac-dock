@@ -833,6 +833,100 @@ PanelWindow {
             }
           }
 
+          // 6. App Launch Bounce Animation
+          Rectangle {
+            Layout.fillWidth: true
+            height: 60
+            radius: 10
+            color: Qt.rgba(255, 255, 255, 0.06)
+
+            RowLayout {
+              anchors.fill: parent
+              anchors.margins: 14
+
+              ColumnLayout {
+                Layout.fillWidth: true
+                Text { text: "App Launch Bounce Animation"; color: "white"; font.bold: true; font.pixelSize: Style.font.body }
+                Text { text: "Authentic macOS spring bounce animation when an app is launched until its window appears"; color: Qt.rgba(255, 255, 255, 0.6); font.pixelSize: Style.font.caption }
+              }
+
+              Rectangle {
+                width: 44
+                height: 24
+                radius: 12
+                color: settingsWindow.dockConfig.bounceOnLaunch !== false ? Commons.Color.accent : Qt.rgba(255, 255, 255, 0.2)
+
+                Rectangle {
+                  width: 20
+                  height: 20
+                  radius: 10
+                  color: "white"
+                  anchors.verticalCenter: parent.verticalCenter
+                  x: settingsWindow.dockConfig.bounceOnLaunch !== false ? 22 : 2
+                  Behavior on x { NumberAnimation { duration: 150 } }
+                }
+
+                MouseArea {
+                  anchors.fill: parent
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: {
+                    var c = Util.cloneJson(settingsWindow.dockConfig)
+                    c.bounceOnLaunch = !(c.bounceOnLaunch !== false)
+                    settingsWindow.dockConfig = c
+                    settingsWindow.configLivePreview(c)
+                  }
+                }
+              }
+            }
+          }
+
+          // 7. Show Running Unpinned Apps in Dock
+          Rectangle {
+            Layout.fillWidth: true
+            height: 60
+            radius: 10
+            color: Qt.rgba(255, 255, 255, 0.06)
+
+            RowLayout {
+              anchors.fill: parent
+              anchors.margins: 14
+
+              ColumnLayout {
+                Layout.fillWidth: true
+                Text { text: "Show Running Unpinned Apps"; color: "white"; font.bold: true; font.pixelSize: Style.font.body }
+                Text { text: "Dynamically shows active applications in a recent partition; right-click any to keep it in dock"; color: Qt.rgba(255, 255, 255, 0.6); font.pixelSize: Style.font.caption }
+              }
+
+              Rectangle {
+                width: 44
+                height: 24
+                radius: 12
+                color: settingsWindow.dockConfig.showRecentApps !== false ? Commons.Color.accent : Qt.rgba(255, 255, 255, 0.2)
+
+                Rectangle {
+                  width: 20
+                  height: 20
+                  radius: 10
+                  color: "white"
+                  anchors.verticalCenter: parent.verticalCenter
+                  x: settingsWindow.dockConfig.showRecentApps !== false ? 22 : 2
+                  Behavior on x { NumberAnimation { duration: 150 } }
+                }
+
+                MouseArea {
+                  anchors.fill: parent
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: {
+                    var c = Util.cloneJson(settingsWindow.dockConfig)
+                    c.showRecentApps = !(c.showRecentApps !== false)
+                    settingsWindow.dockConfig = c
+                    settingsWindow.configLivePreview(c)
+                  }
+                }
+              }
+            }
+          }
+
           Item { Layout.fillHeight: true }
         }
       }
