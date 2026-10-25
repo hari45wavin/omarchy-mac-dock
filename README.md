@@ -27,16 +27,17 @@
 ## ✨ Key Features
 
 - **🍎 macOS Floating Glass Shelf** — Translucent frosted-glass backdrop with specular rim reflections, theme-aware blending, dynamic shelf width expansion, and ambient depth shadows.
-- **🎨 Modern 2026 macOS Vector Icons** — Handcrafted Big Sur / Sonoma SVG iconography (smiling dual-tone Finder, cosmic Launchpad rocket, Mission Control desktop spaces, neon ECG Activity Monitor, Apple precision metallic gear, 3D isometric Plugin Store, and dynamic empty/full frosted wastebasket).
+- **🎨 Authentic macOS Big Sur & Sonoma High-Res Squircles** — Clean, borderless 256x256 Apple squircle artwork with authentic 3D depth, specular reflections, and shadows (Finder, Terminal, VSCode, Brave, Spotify, Discord, Obsidian, Notion, WhatsApp, Telegram, Launchpad, Settings, Trash).
 - **🌊 Continuous Parabolic Wave Magnification** — Authentic macOS bell-curve algorithm (reverse-engineered from `macos_dock`) where neighboring icons fluidly expand and make physical room as your cursor sweeps horizontally.
 - **🏀 Authentic App Launch Bounce** — Icons bounce up and down with spring-physics easing when clicked until the Wayland application window maps on screen.
 - **🗂️ Dynamic Recent / Unpinned Apps Partition** — When you launch unpinned apps, they appear in a dedicated macOS recent partition with running dots; right-click any to keep it in the dock!
 - **📋 Native macOS Popover Context Menus** — Right-click any app icon for a sleek frosted popover menu with "Bring to Front", "Minimize", "Quit", "Keep in Dock", and Trash management.
 - **🔄 Multi-Window Cycling** — Clicking an app with multiple open instances cycles focus seamlessly through every window.
-- **🙈 Intelligent Auto-Hide (Window Dodge)** — Smoothly slides the dock down when application windows are open or overlapping, and smoothly slides back up when your cursor touches the bottom edge. Configurable in settings!
-- **💬 Floating High-Contrast Tooltips** — Solid frosted dark tooltip pills with drop shadows and pointers that never get cut off or merge with open windows above.
+- **🙈 Intelligent Auto-Hide & Intellihide** — 3 configurable visibility modes: Intellihide (hides when apps are open, visible on clean desktop), Always Auto-Hide (only appears on bottom edge hover with 550ms debounce grace period), and Always Visible (reserves desktop workspace).
+- **💬 Floating High-Contrast Tooltips** — Solid frosted dark tooltip pills with drop shadows that never clip at window boundaries or merge with open windows above.
 - **🟢 Hyprland Window Tracking & Active Dots** — Live window state indicators (illuminated pill for the focused window, glowing dot for background running apps).
 - **🪟 Click-to-Minimize & Toggle Focus** — Click an active app's dock icon to instantly minimize it into Hyprland's scratchpad; click again to restore it seamlessly.
+- **💾 Flawless Settings Persistence** — All size selections (36px to 72px), auto-hide modes, and pinned app configurations save atomically to `~/.config/omarchy/mac-dock.json` without reverting.
 - **🚀 Pre-Task System Launchers & Modules**:
   - 📱 **Launchpad / Menu** — Quick-open Omarchy application menu with modern rocket launcher icon.
   - 🖥️ **Mission Control** — Workspace switcher displaying the active Hyprland workspace number.

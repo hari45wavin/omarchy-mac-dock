@@ -1,0 +1,124 @@
+{
+  "version": 1,
+  "dockSize": 44,
+  "magnification": true,
+  "maxScale": 1.35,
+  "glassOpacity": 0.45,
+  "reserveSpace": false,
+  "bottomMargin": 10,
+  "clickToMinimize": true,
+  "bounceOnLaunch": true,
+  "showRecentApps": true,
+  "autoHide": false,
+  "autoHideMode": "intellihide",
+  "hideOnAppOpen": true,
+  "preTasks": {
+    "showLauncher": true,
+    "showWorkspaces": true,
+    "showActivityMonitor": false,
+    "showPluginManager": false,
+    "showTrash": true,
+    "showSettings": true
+  },
+  "pinnedApps": [
+    {
+      "id": "org.gnome.Nautilus",
+      "name": "Finder",
+      "desktopFile": "org.gnome.Nautilus.desktop",
+      "icon": "/home/hariom_joshi/.config/omarchy/plugins/omarchy-mac-dock/assets/icons/Finder.png",
+      "exec": "nautilus",
+      "gradientStart": "#38bdf8",
+      "gradientEnd": "#0284c7"
+    },
+    {
+      "id": "brave-browser",
+      "name": "Brave Browser",
+      "desktopFile": "brave-browser.desktop",
+      "icon": "/home/hariom_joshi/.config/omarchy/plugins/omarchy-mac-dock/assets/icons/Brave.png",
+      "exec": "brave",
+      "gradientStart": "#fb923c",
+      "gradientEnd": "#ea580c"
+    },
+    {
+      "id": "com.microsoft.VSCode",
+      "name": "Visual Studio Code",
+      "desktopFile": "com.microsoft.VSCode.desktop",
+      "icon": "/home/hariom_joshi/.config/omarchy/plugins/omarchy-mac-dock/assets/icons/vscode.png",
+      "exec": "code",
+      "gradientStart": "#38bdf8",
+      "gradientEnd": "#0284c7"
+    },
+    {
+      "id": "antigravity",
+      "name": "Antigravity IDE",
+      "desktopFile": "antigravity.desktop",
+      "icon": "antigravity",
+      "exec": "antigravity",
+      "gradientStart": "#818cf8",
+      "gradientEnd": "#4f46e5"
+    },
+    {
+      "id": "foot",
+      "name": "Terminal",
+      "desktopFile": "foot.desktop",
+      "icon": "/home/hariom_joshi/.config/omarchy/plugins/omarchy-mac-dock/assets/icons/Terminal.png",
+      "exec": "foot",
+      "gradientStart": "#334155",
+      "gradientEnd": "#0f172a"
+    },
+    {
+      "id": "notion",
+      "name": "Notion",
+      "desktopFile": "notion.desktop",
+      "icon": "/home/hariom_joshi/.config/omarchy/plugins/omarchy-mac-dock/assets/icons/notion.png",
+      "exec": "notion-app",
+      "gradientStart": "#475569",
+      "gradientEnd": "#1e293b"
+    },
+    {
+      "id": "md.obsidian.Obsidian",
+      "name": "Obsidian",
+      "desktopFile": "obsidian.desktop",
+      "icon": "/home/hariom_joshi/.config/omarchy/plugins/omarchy-mac-dock/assets/icons/obsidian.png",
+      "exec": "obsidian",
+      "gradientStart": "#a855f7",
+      "gradientEnd": "#6b21a8"
+    },
+    {
+      "id": "spotify",
+      "name": "Spotify",
+      "desktopFile": "spotify.desktop",
+      "icon": "/home/hariom_joshi/.config/omarchy/plugins/omarchy-mac-dock/assets/icons/Spotify.png",
+      "exec": "spotify",
+      "gradientStart": "#22c55e",
+      "gradientEnd": "#15803d"
+    },
+    {
+      "id": "WhatsApp",
+      "name": "WhatsApp",
+      "desktopFile": "WhatsApp.desktop",
+      "icon": "/home/hariom_joshi/.config/omarchy/plugins/omarchy-mac-dock/assets/icons/whatsapp.png",
+      "exec": "omarchy-launch-webapp https://web.whatsapp.com/",
+      "gradientStart": "#10b981",
+      "gradientEnd": "#059669"
+    },
+    {
+      "id": "Discord",
+      "name": "Discord",
+      "desktopFile": "Discord.desktop",
+      "icon": "/home/hariom_joshi/.config/omarchy/plugins/omarchy-mac-dock/assets/icons/discord.png",
+      "exec": "discord",
+      "gradientStart": "#818cf8",
+      "gradientEnd": "#4f46e5"
+    },
+    {
+      "id": "omasettings",
+      "name": "System Settings",
+      "desktopFile": "omasettings.desktop",
+      "icon": "/home/hariom_joshi/.config/omarchy/plugins/omarchy-mac-dock/assets/icons/settings.png",
+      "exec": "omarchy-shell omasettings toggle",
+      "gradientStart": "#94a3b8",
+      "gradientEnd": "#475569"
+    }
+  ]
+}

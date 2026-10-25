@@ -62,6 +62,14 @@ Item {
     return fallback ? fallback : ""
   }
 
+  readonly property bool isFullAppArtwork: {
+    var u = String(root.iconUrl).toLowerCase()
+    if (u.indexOf(".png") !== -1 || u.indexOf(".jpg") !== -1 || u.indexOf(".webp") !== -1) return true
+    if (u.indexOf("assets/icons") !== -1) return true
+    if (u.indexOf("-symbolic") === -1 && appImage.status === Image.Ready) return true
+    return false
+  }
+
   readonly property bool isHovered: hoverArea.containsMouse
 
   // Continuous Parabolic Wave Magnification (Reverse-engineered from master-wayne7/macos_dock)
@@ -162,25 +170,30 @@ Item {
         z: 0
       }
 
-      // Squircle macOS Card
+      // Authentic Apple Squircle Container / Fallback Card
       Rectangle {
         id: squircle
         anchors.fill: parent
         radius: Math.round(root.baseSize * 0.22)
-        clip: true
+        clip: !root.isFullAppArtwork
         z: 1
 
-        gradient: Gradient {
+        color: root.isFullAppArtwork ? "transparent" : "transparent"
+
+        gradient: root.isFullAppArtwork ? null : fallbackGradient
+        border.width: root.isFullAppArtwork ? 0 : 1
+        border.color: Qt.rgba(255, 255, 255, isHovered ? 0.55 : 0.25)
+
+        Gradient {
+          id: fallbackGradient
           orientation: Gradient.Vertical
           GradientStop { position: 0.0; color: root.colorStart }
           GradientStop { position: 1.0; color: root.colorEnd }
         }
 
-        border.width: 1
-        border.color: Qt.rgba(255, 255, 255, isHovered ? 0.55 : 0.25)
-
-        // Glossy Top Reflection
+        // Glossy Top Reflection only for synthetic cards
         Rectangle {
+          visible: !root.isFullAppArtwork
           anchors.top: parent.top
           anchors.left: parent.left
           anchors.right: parent.right
@@ -193,12 +206,12 @@ Item {
           }
         }
 
-        // App Icon Image
+        // App Icon Image - Renders authentic 256x256 macOS Big Sur artwork crisp & unboxed
         Image {
           id: appImage
           anchors.centerIn: parent
-          width: Math.round(parent.width * 0.72)
-          height: Math.round(parent.height * 0.72)
+          width: root.isFullAppArtwork ? parent.width : Math.round(parent.width * 0.72)
+          height: root.isFullAppArtwork ? parent.height : Math.round(parent.height * 0.72)
           sourceSize: Qt.size(Math.round(parent.width * 2), Math.round(parent.height * 2))
           source: root.iconUrl
           fillMode: Image.PreserveAspectFit
@@ -283,7 +296,7 @@ Item {
   Rectangle {
     id: tooltip
     visible: isHovered && (!dockWindow.menuPanel || !dockWindow.menuPanel.visible)
-    z: 2000
+    z: 9999
     anchors.bottom: bounceOffset.top
     anchors.bottomMargin: 14
     anchors.horizontalCenter: parent.horizontalCenter
@@ -292,10 +305,10 @@ Item {
     implicitHeight: tooltipLabel.implicitHeight + 10
     radius: 7
 
-    // Deep high-contrast background with solid opacity so it never merges with apps above
+    // Deep high-contrast obsidian background with crisp border
     color: "#18181b"
     border.width: 1
-    border.color: Qt.rgba(255, 255, 255, 0.35)
+    border.color: Qt.rgba(255, 255, 255, 0.32)
 
     // Shadow beneath tooltip
     Rectangle {

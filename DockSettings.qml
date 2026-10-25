@@ -13,6 +13,7 @@ PanelWindow {
   id: settingsWindow
 
   property var dockConfig: ({})
+  property var originalConfig: ({})
   property var allApps: []
   property string searchQuery: ""
 
@@ -35,7 +36,7 @@ PanelWindow {
 
     MouseArea {
       anchors.fill: parent
-      onClicked: settingsWindow.closeSettings()
+      onClicked: settingsWindow.cancelAndClose()
     }
   }
 
@@ -100,7 +101,7 @@ PanelWindow {
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onClicked: settingsWindow.closeSettings()
+            onClicked: settingsWindow.cancelAndClose()
           }
         }
       }
@@ -180,191 +181,142 @@ PanelWindow {
           radius: 8
           color: Qt.rgba(255, 255, 255, 0.08)
           border.width: 1
-          border.color: searchInput.activeFocus ? Commons.Color.accent : Qt.rgba(255, 255, 255, 0.15)
+          border.color: Qt.rgba(255, 255, 255, 0.15)
 
-          RowLayout {
+          TextInput {
+            id: searchInput
             anchors.fill: parent
             anchors.leftMargin: 12
-            anchors.rightMargin: 8
+            anchors.rightMargin: 12
+            verticalAlignment: TextInput.AlignVCenter
+            color: "white"
+            font.pixelSize: Style.font.body
+            font.family: Style.font.family
+            onTextChanged: settingsWindow.searchQuery = text
 
-            TextInput {
-              id: searchInput
-              Layout.fillWidth: true
-              Layout.fillHeight: true
-              verticalAlignment: TextInput.AlignVCenter
-              color: "white"
+            Text {
+              visible: !searchInput.text
+              text: "🔍 Search all installed applications to add to your dock..."
+              color: Qt.rgba(255, 255, 255, 0.4)
               font.pixelSize: Style.font.body
+              anchors.verticalCenter: parent.verticalCenter
               font.family: Style.font.family
-              clip: true
-
-              Text {
-                anchors.fill: parent
-                verticalAlignment: Text.AlignVCenter
-                text: "Search installed applications to pin or unpin..."
-                color: Qt.rgba(255, 255, 255, 0.4)
-                font.pixelSize: Style.font.body
-                font.family: Style.font.family
-                visible: !searchInput.text && !searchInput.activeFocus
-              }
-            }
-
-            Rectangle {
-              visible: searchInput.text.length > 0
-              width: 20
-              height: 20
-              radius: 10
-              color: Qt.rgba(255, 255, 255, 0.2)
-              Text {
-                anchors.centerIn: parent
-                text: "✕"
-                color: "white"
-                font.pixelSize: 10
-              }
-              MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: searchInput.text = ""
-              }
             }
           }
         }
 
-        // Two Column List: Left = Currently Pinned, Right = Available Apps to Add
+        // Split View: Pinned on Left | Available on Right
         RowLayout {
           anchors.top: searchBox.bottom
-          anchors.topMargin: 12
+          anchors.topMargin: 14
           anchors.left: parent.left
           anchors.right: parent.right
           anchors.bottom: parent.bottom
           spacing: 16
 
-          // Left: Currently Pinned Apps
-          Rectangle {
+          // Pinned Apps List (Left Column)
+          ColumnLayout {
             Layout.fillHeight: true
-            Layout.preferredWidth: 360
-            radius: 10
-            color: Qt.rgba(0, 0, 0, 0.25)
-            border.width: 1
-            border.color: Qt.rgba(255, 255, 255, 0.1)
+            Layout.preferredWidth: parent.width * 0.48
+            spacing: 8
 
-            ColumnLayout {
-              anchors.fill: parent
-              anchors.margins: 12
+            Text {
+              text: "Currently Pinned in Dock (" + ((settingsWindow.dockConfig.pinnedApps || []).length) + ")"
+              color: Commons.Color.foreground
+              font.pixelSize: Style.font.caption
+              font.bold: true
+              font.family: Style.font.family
+            }
 
-              Text {
-                text: "Currently Pinned in Dock (" + (settingsWindow.dockConfig.pinnedApps ? settingsWindow.dockConfig.pinnedApps.length : 0) + ")"
-                color: Commons.Color.accent
-                font.pixelSize: Style.font.caption
-                font.bold: true
-                font.family: Style.font.family
-              }
+            Rectangle {
+              Layout.fillWidth: true
+              Layout.fillHeight: true
+              radius: 10
+              color: Qt.rgba(0, 0, 0, 0.25)
+              border.width: 1
+              border.color: Qt.rgba(255, 255, 255, 0.08)
+              clip: true
 
               ListView {
                 id: pinnedList
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                clip: true
-                spacing: 6
+                anchors.fill: parent
+                anchors.margins: 6
+                spacing: 4
                 model: settingsWindow.dockConfig.pinnedApps || []
 
                 delegate: Rectangle {
+                  required property var modelData
+                  required property int index
+
                   width: pinnedList.width
-                  height: 48
-                  radius: 8
-                  color: Qt.rgba(255, 255, 255, 0.06)
+                  height: 42
+                  radius: 6
+                  color: rowHover.containsMouse ? Qt.rgba(255, 255, 255, 0.08) : "transparent"
+
+                  MouseArea {
+                    id: rowHover
+                    anchors.fill: parent
+                    hoverEnabled: true
+                  }
 
                   RowLayout {
                     anchors.fill: parent
-                    anchors.margins: 6
-                    spacing: 8
-
-                    // App Squircle with real icon preview
-                    Rectangle {
-                      Layout.preferredWidth: 32
-                      Layout.preferredHeight: 32
-                      radius: 8
-                      clip: true
-                      gradient: Gradient {
-                        orientation: Gradient.Vertical
-                        GradientStop { position: 0.0; color: modelData.gradientStart || "#38bdf8" }
-                        GradientStop { position: 1.0; color: modelData.gradientEnd || "#0284c7" }
-                      }
-
-                      Image {
-                        anchors.centerIn: parent
-                        width: 22
-                        height: 22
-                        sourceSize: Qt.size(44, 44)
-                        source: {
-                          var icon = String(modelData.icon || "")
-                          if (!icon) return ""
-                          if (icon.indexOf("/") === 0 || icon.indexOf("file://") === 0) {
-                            return icon.indexOf("file://") === 0 ? icon : "file://" + icon
-                          }
-                          return Quickshell.iconPath(icon, true)
-                        }
-                        fillMode: Image.PreserveAspectFit
-                        visible: status === Image.Ready
-                      }
-
-                      Text {
-                        anchors.centerIn: parent
-                        visible: parent.children[0].status !== Image.Ready
-                        text: (modelData.name || "A").charAt(0)
-                        color: "white"
-                        font.pixelSize: 13
-                        font.bold: true
-                      }
-                    }
+                    anchors.leftMargin: 10
+                    anchors.rightMargin: 10
+                    spacing: 10
 
                     Text {
-                      Layout.fillWidth: true
                       text: modelData.name || modelData.id
                       color: "white"
                       font.pixelSize: Style.font.body
+                      Layout.fillWidth: true
                       elide: Text.ElideRight
                       font.family: Style.font.family
                     }
 
-                    // Move Left / Up button
+                    // Move Up button
                     Rectangle {
-                      Layout.preferredWidth: 26
-                      Layout.preferredHeight: 26
+                      width: 26
+                      height: 26
                       radius: 4
-                      color: Qt.rgba(255, 255, 255, 0.12)
-                      visible: index > 0
-                      Text { anchors.centerIn: parent; text: "↑"; color: "white"; font.bold: true }
+                      color: upHover.containsMouse ? Qt.rgba(255, 255, 255, 0.2) : Qt.rgba(255, 255, 255, 0.08)
+                      Text { anchors.centerIn: parent; text: "▲"; color: "white"; font.pixelSize: 10 }
                       MouseArea {
+                        id: upHover
                         anchors.fill: parent
+                        hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: settingsWindow.movePinnedApp(index, -1)
                       }
                     }
 
-                    // Move Right / Down button
+                    // Move Down button
                     Rectangle {
-                      Layout.preferredWidth: 26
-                      Layout.preferredHeight: 26
+                      width: 26
+                      height: 26
                       radius: 4
-                      color: Qt.rgba(255, 255, 255, 0.12)
-                      visible: index < (settingsWindow.dockConfig.pinnedApps ? settingsWindow.dockConfig.pinnedApps.length - 1 : 0)
-                      Text { anchors.centerIn: parent; text: "↓"; color: "white"; font.bold: true }
+                      color: downHover.containsMouse ? Qt.rgba(255, 255, 255, 0.2) : Qt.rgba(255, 255, 255, 0.08)
+                      Text { anchors.centerIn: parent; text: "▼"; color: "white"; font.pixelSize: 10 }
                       MouseArea {
+                        id: downHover
                         anchors.fill: parent
+                        hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: settingsWindow.movePinnedApp(index, 1)
                       }
                     }
 
-                    // Remove button
+                    // Remove / Unpin button
                     Rectangle {
-                      Layout.preferredWidth: 26
-                      Layout.preferredHeight: 26
+                      width: 26
+                      height: 26
                       radius: 4
-                      color: Qt.rgba(239, 68, 68, 0.3)
-                      Text { anchors.centerIn: parent; text: "✕"; color: "#f87171"; font.bold: true }
+                      color: removeHover.containsMouse ? "#ef4444" : Qt.rgba(239, 68, 68, 0.3)
+                      Text { anchors.centerIn: parent; text: "✕"; color: "white"; font.pixelSize: 12; font.bold: true }
                       MouseArea {
+                        id: removeHover
                         anchors.fill: parent
+                        hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: settingsWindow.removePinnedApp(index)
                       }
@@ -375,76 +327,54 @@ PanelWindow {
             }
           }
 
-          // Right: Available System Apps to Add
-          Rectangle {
-            Layout.fillWidth: true
+          // Available Applications List (Right Column)
+          ColumnLayout {
             Layout.fillHeight: true
-            radius: 10
-            color: Qt.rgba(0, 0, 0, 0.25)
-            border.width: 1
-            border.color: Qt.rgba(255, 255, 255, 0.1)
+            Layout.fillWidth: true
+            spacing: 8
 
-            ColumnLayout {
-              anchors.fill: parent
-              anchors.margins: 12
+            Text {
+              text: "Available System Apps (Click to Pin)"
+              color: Commons.Color.foreground
+              font.pixelSize: Style.font.caption
+              font.bold: true
+              font.family: Style.font.family
+            }
 
-              Text {
-                text: "Installed System Applications"
-                color: Qt.rgba(255, 255, 255, 0.7)
-                font.pixelSize: Style.font.caption
-                font.bold: true
-                font.family: Style.font.family
-              }
+            Rectangle {
+              Layout.fillWidth: true
+              Layout.fillHeight: true
+              radius: 10
+              color: Qt.rgba(0, 0, 0, 0.25)
+              border.width: 1
+              border.color: Qt.rgba(255, 255, 255, 0.08)
+              clip: true
 
               ListView {
                 id: availableList
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                clip: true
-                spacing: 6
-                model: settingsWindow.filteredApps(searchInput.text)
+                anchors.fill: parent
+                anchors.margins: 6
+                spacing: 4
+                model: settingsWindow.filteredApps(settingsWindow.searchQuery)
 
                 delegate: Rectangle {
+                  required property var modelData
                   width: availableList.width
-                  height: 48
-                  radius: 8
-                  color: Qt.rgba(255, 255, 255, 0.05)
+                  height: 44
+                  radius: 6
+                  color: availHover.containsMouse ? Qt.rgba(255, 255, 255, 0.08) : "transparent"
+
+                  MouseArea {
+                    id: availHover
+                    anchors.fill: parent
+                    hoverEnabled: true
+                  }
 
                   RowLayout {
                     anchors.fill: parent
-                    anchors.margins: 6
+                    anchors.leftMargin: 10
+                    anchors.rightMargin: 10
                     spacing: 10
-
-                    // Strictly constrained Icon Container (Fixes giant unscaled icon bug)
-                    Item {
-                      Layout.preferredWidth: 32
-                      Layout.preferredHeight: 32
-                      Layout.alignment: Qt.AlignVCenter
-                      clip: true
-
-                      Image {
-                        id: appEntryIcon
-                        anchors.fill: parent
-                        sourceSize: Qt.size(64, 64)
-                        fillMode: Image.PreserveAspectFit
-                        source: Quickshell.iconPath(modelData.icon, true)
-                        visible: status === Image.Ready
-                      }
-
-                      Rectangle {
-                        anchors.fill: parent
-                        radius: 6
-                        color: Commons.Color.accent
-                        visible: appEntryIcon.status !== Image.Ready
-                        Text {
-                          anchors.centerIn: parent
-                          text: (modelData.name || "A").charAt(0).toUpperCase()
-                          color: "white"
-                          font.pixelSize: 13
-                          font.bold: true
-                        }
-                      }
-                    }
 
                     Text {
                       Layout.fillWidth: true
@@ -527,9 +457,7 @@ PanelWindow {
               model: [
                 { key: "showLauncher", label: "Launchpad / App Menu", desc: "macOS modern rocket launcher for applications" },
                 { key: "showWorkspaces", label: "Mission Control / Workspaces", desc: "Displays current Hyprland workspace indicator" },
-                { key: "showActivityMonitor", label: "Activity Monitor", desc: "Quick launcher for CPU & memory monitor" },
-                { key: "showPluginManager", label: "Plugin Store (Omaplug)", desc: "Quick launcher for Omarchy plugin manager" },
-                { key: "showSettings", label: "Dock Customizer Gear", desc: "Direct gear shortcut to edit dock layout anytime" },
+                { key: "showSettings", label: "Dock Settings Gear", desc: "Direct gear shortcut to edit dock layout anytime" },
                 { key: "showTrash", label: "Trash Bin", desc: "macOS Trash shortcut with empty/full states" }
               ]
 
@@ -554,7 +482,7 @@ PanelWindow {
                     width: 44
                     height: 24
                     radius: 12
-                    color: settingsWindow.dockConfig.preTasks && settingsWindow.dockConfig.preTasks[modelData.key] ? Commons.Color.accent : Qt.rgba(255, 255, 255, 0.2)
+                    color: settingsWindow.dockConfig.preTasks && settingsWindow.dockConfig.preTasks[modelData.key] !== false ? Commons.Color.accent : Qt.rgba(255, 255, 255, 0.2)
 
                     Rectangle {
                       width: 20
@@ -562,7 +490,7 @@ PanelWindow {
                       radius: 10
                       color: "white"
                       anchors.verticalCenter: parent.verticalCenter
-                      x: settingsWindow.dockConfig.preTasks && settingsWindow.dockConfig.preTasks[modelData.key] ? 22 : 2
+                      x: settingsWindow.dockConfig.preTasks && settingsWindow.dockConfig.preTasks[modelData.key] !== false ? 22 : 2
                       Behavior on x { NumberAnimation { duration: 150 } }
                     }
 
@@ -584,37 +512,33 @@ PanelWindow {
       // ==========================================
       // TAB 2: APPEARANCE & BEHAVIOR
       // ==========================================
-      Item {
+      ScrollView {
         visible: tabBar.activeTab === 2
         anchors.fill: parent
+        clip: true
 
         ColumnLayout {
-          anchors.fill: parent
-          spacing: 12
+          width: parent.width - 24
+          spacing: 16
 
-          Text {
-            text: "Dock Appearance & Window Behavior"
-            color: Commons.Color.foreground
-            font.pixelSize: Style.font.title
-            font.bold: true
-            font.family: Style.font.family
-          }
-
-          // 1. Icon Size Preset Buttons
+          // 1. Dock Icon Size Selector
           Rectangle {
             Layout.fillWidth: true
-            height: 70
+            height: 82
             radius: 10
             color: Qt.rgba(255, 255, 255, 0.06)
 
-            RowLayout {
+            ColumnLayout {
               anchors.fill: parent
               anchors.margins: 14
+              spacing: 8
 
-              ColumnLayout {
-                Layout.fillWidth: true
-                Text { text: "Base Dock Icon Size"; color: "white"; font.bold: true; font.pixelSize: Style.font.body }
-                Text { text: "Current size: " + (settingsWindow.dockConfig.dockSize || 44) + "px (Live Preview)"; color: Qt.rgba(255, 255, 255, 0.6); font.pixelSize: Style.font.caption }
+              Text {
+                text: "Dock Icon Size: " + (settingsWindow.dockConfig.dockSize || 44) + "px"
+                color: "white"
+                font.bold: true
+                font.pixelSize: Style.font.body
+                font.family: Style.font.family
               }
 
               RowLayout {
@@ -645,47 +569,54 @@ PanelWindow {
             }
           }
 
-          // 2. Auto-Hide Dock (Intellihide)
+          // 2. Auto-Hide & Visibility Mode (Intellihide / Always / Disabled)
           Rectangle {
             Layout.fillWidth: true
-            height: 60
+            height: 94
             radius: 10
             color: Qt.rgba(255, 255, 255, 0.06)
 
-            RowLayout {
+            ColumnLayout {
               anchors.fill: parent
               anchors.margins: 14
+              spacing: 8
 
-              ColumnLayout {
-                Layout.fillWidth: true
-                Text { text: "Auto-Hide Dock When Windows are Open"; color: "white"; font.bold: true; font.pixelSize: Style.font.body }
-                Text { text: "Smoothly hides the dock when apps are open; moves back up when cursor hovers bottom edge"; color: Qt.rgba(255, 255, 255, 0.6); font.pixelSize: Style.font.caption }
+              Text {
+                text: "Dock Visibility & Auto-Hide Mode"
+                color: "white"
+                font.bold: true
+                font.pixelSize: Style.font.body
               }
 
-              Rectangle {
-                width: 44
-                height: 24
-                radius: 12
-                color: settingsWindow.dockConfig.autoHide ? Commons.Color.accent : Qt.rgba(255, 255, 255, 0.2)
+              RowLayout {
+                spacing: 8
+                Repeater {
+                  model: [
+                    { key: "intellihide", label: "Intellihide (Hide When Apps Open)" },
+                    { key: "always", label: "Always Auto-Hide" },
+                    { key: "disabled", label: "Always Visible (Reserve Space)" }
+                  ]
 
-                Rectangle {
-                  width: 20
-                  height: 20
-                  radius: 10
-                  color: "white"
-                  anchors.verticalCenter: parent.verticalCenter
-                  x: settingsWindow.dockConfig.autoHide ? 22 : 2
-                  Behavior on x { NumberAnimation { duration: 150 } }
-                }
+                  Rectangle {
+                    width: labelItem.implicitWidth + 24
+                    height: 34
+                    radius: 6
+                    color: (settingsWindow.dockConfig.autoHideMode === modelData.key || (!settingsWindow.dockConfig.autoHideMode && modelData.key === "intellihide")) ? Commons.Color.accent : Qt.rgba(255, 255, 255, 0.12)
 
-                MouseArea {
-                  anchors.fill: parent
-                  cursorShape: Qt.PointingHandCursor
-                  onClicked: {
-                    var c = Util.cloneJson(settingsWindow.dockConfig)
-                    c.autoHide = !c.autoHide
-                    settingsWindow.dockConfig = c
-                    settingsWindow.configLivePreview(c)
+                    Text {
+                      id: labelItem
+                      anchors.centerIn: parent
+                      text: modelData.label
+                      color: "white"
+                      font.pixelSize: 11
+                      font.bold: true
+                    }
+
+                    MouseArea {
+                      anchors.fill: parent
+                      cursorShape: Qt.PointingHandCursor
+                      onClicked: settingsWindow.updateHideMode(modelData.key)
+                    }
                   }
                 }
               }
@@ -786,54 +717,7 @@ PanelWindow {
             }
           }
 
-          // 5. Reserve Screen Space for Windows
-          Rectangle {
-            Layout.fillWidth: true
-            height: 60
-            radius: 10
-            color: Qt.rgba(255, 255, 255, 0.06)
-
-            RowLayout {
-              anchors.fill: parent
-              anchors.margins: 14
-
-              ColumnLayout {
-                Layout.fillWidth: true
-                Text { text: "Reserve Space for Windows"; color: "white"; font.bold: true; font.pixelSize: Style.font.body }
-                Text { text: "When enabled, Hyprland windows tile neatly above the dock instead of overlapping it"; color: Qt.rgba(255, 255, 255, 0.6); font.pixelSize: Style.font.caption }
-              }
-
-              Rectangle {
-                width: 44
-                height: 24
-                radius: 12
-                color: settingsWindow.dockConfig.reserveSpace ? Commons.Color.accent : Qt.rgba(255, 255, 255, 0.2)
-
-                Rectangle {
-                  width: 20
-                  height: 20
-                  radius: 10
-                  color: "white"
-                  anchors.verticalCenter: parent.verticalCenter
-                  x: settingsWindow.dockConfig.reserveSpace ? 22 : 2
-                  Behavior on x { NumberAnimation { duration: 150 } }
-                }
-
-                MouseArea {
-                  anchors.fill: parent
-                  cursorShape: Qt.PointingHandCursor
-                  onClicked: {
-                    var c = Util.cloneJson(settingsWindow.dockConfig)
-                    c.reserveSpace = !c.reserveSpace
-                    settingsWindow.dockConfig = c
-                    settingsWindow.configLivePreview(c)
-                  }
-                }
-              }
-            }
-          }
-
-          // 6. App Launch Bounce Animation
+          // 5. App Launch Bounce Animation
           Rectangle {
             Layout.fillWidth: true
             height: 60
@@ -880,7 +764,7 @@ PanelWindow {
             }
           }
 
-          // 7. Show Running Unpinned Apps in Dock
+          // 6. Show Running Unpinned Apps in Dock
           Rectangle {
             Layout.fillWidth: true
             height: 60
@@ -963,7 +847,7 @@ PanelWindow {
           MouseArea {
             anchors.fill: parent
             cursorShape: Qt.PointingHandCursor
-            onClicked: settingsWindow.closeSettings()
+            onClicked: settingsWindow.cancelAndClose()
           }
         }
 
@@ -985,18 +869,29 @@ PanelWindow {
 
   // --- Logic Helpers ---
   function openSettings(currentConfig) {
-    dockConfig = Util.cloneJson(currentConfig || DockModel.defaultConfig())
+    originalConfig = Util.cloneJson(currentConfig || DockModel.defaultConfig())
+    dockConfig = Util.cloneJson(originalConfig)
     loadSystemApps()
     visible = true
   }
 
-  function closeSettings() {
+  function cancelAndClose() {
+    configLivePreview(originalConfig)
     visible = false
   }
 
   function updateDockSize(newSize) {
     var c = Util.cloneJson(dockConfig)
     c.dockSize = newSize
+    dockConfig = c
+    configLivePreview(c)
+  }
+
+  function updateHideMode(mode) {
+    var c = Util.cloneJson(dockConfig)
+    c.autoHideMode = mode
+    c.autoHide = (mode === "always" || mode === "intellihide")
+    c.reserveSpace = (mode === "disabled")
     dockConfig = c
     configLivePreview(c)
   }
@@ -1078,11 +973,12 @@ PanelWindow {
   function pinApp(app) {
     var pinned = (dockConfig.pinnedApps || []).slice()
     var gradient = DockModel.defaultGradients(pinned.length)
+    var macIcon = DockModel.resolveMacIcon(app.id, app.icon)
     pinned.push({
       id: app.id,
       name: app.name,
       desktopFile: app.desktopFile,
-      icon: app.icon,
+      icon: macIcon,
       gradientStart: gradient.start,
       gradientEnd: gradient.end
     })

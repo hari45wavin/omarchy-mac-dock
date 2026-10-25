@@ -13,11 +13,13 @@ function defaultConfig() {
     bounceOnLaunch: true,
     showRecentApps: true,
     autoHide: false,
+    autoHideMode: "intellihide", // "intellihide", "always", "disabled"
+    hideOnAppOpen: true,
     preTasks: {
       showLauncher: true,
       showWorkspaces: true,
-      showActivityMonitor: true,
-      showPluginManager: true,
+      showActivityMonitor: false,
+      showPluginManager: false,
       showTrash: true,
       showSettings: true
     },
@@ -26,7 +28,7 @@ function defaultConfig() {
         id: "org.gnome.Nautilus",
         name: "Finder",
         desktopFile: "org.gnome.Nautilus.desktop",
-        icon: iconDir + "/finder.svg",
+        icon: iconDir + "/Finder.png",
         exec: "nautilus",
         gradientStart: "#38bdf8",
         gradientEnd: "#0284c7"
@@ -35,7 +37,7 @@ function defaultConfig() {
         id: "brave-browser",
         name: "Brave Browser",
         desktopFile: "brave-browser.desktop",
-        icon: "brave-desktop",
+        icon: iconDir + "/Brave.png",
         exec: "brave",
         gradientStart: "#fb923c",
         gradientEnd: "#ea580c"
@@ -53,7 +55,7 @@ function defaultConfig() {
         id: "foot",
         name: "Terminal",
         desktopFile: "foot.desktop",
-        icon: "foot",
+        icon: iconDir + "/Terminal.png",
         exec: "foot",
         gradientStart: "#334155",
         gradientEnd: "#0f172a"
@@ -62,7 +64,7 @@ function defaultConfig() {
         id: "notion",
         name: "Notion",
         desktopFile: "notion.desktop",
-        icon: "notion",
+        icon: iconDir + "/notion.png",
         exec: "notion-app",
         gradientStart: "#475569",
         gradientEnd: "#1e293b"
@@ -71,7 +73,7 @@ function defaultConfig() {
         id: "md.obsidian.Obsidian",
         name: "Obsidian",
         desktopFile: "obsidian.desktop",
-        icon: "obsidian",
+        icon: iconDir + "/obsidian.png",
         exec: "obsidian",
         gradientStart: "#a855f7",
         gradientEnd: "#6b21a8"
@@ -80,7 +82,7 @@ function defaultConfig() {
         id: "spotify",
         name: "Spotify",
         desktopFile: "spotify.desktop",
-        icon: "spotify-client",
+        icon: iconDir + "/Spotify.png",
         exec: "spotify",
         gradientStart: "#22c55e",
         gradientEnd: "#15803d"
@@ -89,22 +91,79 @@ function defaultConfig() {
         id: "WhatsApp",
         name: "WhatsApp",
         desktopFile: "WhatsApp.desktop",
-        icon: "whatsapp",
+        icon: iconDir + "/whatsapp.png",
         exec: "omarchy-launch-webapp https://web.whatsapp.com/",
         gradientStart: "#10b981",
         gradientEnd: "#059669"
       },
       {
+        id: "Discord",
+        name: "Discord",
+        desktopFile: "Discord.desktop",
+        icon: iconDir + "/discord.png",
+        exec: "discord",
+        gradientStart: "#818cf8",
+        gradientEnd: "#4f46e5"
+      },
+      {
         id: "omasettings",
         name: "System Settings",
         desktopFile: "omasettings.desktop",
-        icon: iconDir + "/settings.svg",
+        icon: iconDir + "/settings.png",
         exec: "omarchy-shell omasettings toggle",
         gradientStart: "#94a3b8",
         gradientEnd: "#475569"
       }
     ]
   };
+}
+
+function resolveMacIcon(appId, fallbackIcon) {
+  var home = Quickshell.env("HOME");
+  var iconDir = home + "/.config/omarchy/plugins/omarchy-mac-dock/assets/icons";
+  var id = String(appId || "").toLowerCase();
+
+  if (id.indexOf("nautilus") !== -1 || id.indexOf("finder") !== -1 || id.indexOf("files") !== -1) {
+    return iconDir + "/Finder.png";
+  }
+  if (id.indexOf("brave") !== -1) {
+    return iconDir + "/Brave.png";
+  }
+  if (id.indexOf("vscode") !== -1 || id.indexOf("code") !== -1) {
+    return iconDir + "/vscode.png";
+  }
+  if (id.indexOf("foot") !== -1 || id.indexOf("terminal") !== -1 || id.indexOf("alacritty") !== -1 || id.indexOf("kitty") !== -1) {
+    return iconDir + "/Terminal.png";
+  }
+  if (id.indexOf("spotify") !== -1) {
+    return iconDir + "/Spotify.png";
+  }
+  if (id.indexOf("discord") !== -1) {
+    return iconDir + "/discord.png";
+  }
+  if (id.indexOf("obsidian") !== -1) {
+    return iconDir + "/obsidian.png";
+  }
+  if (id.indexOf("notion") !== -1) {
+    return iconDir + "/notion.png";
+  }
+  if (id.indexOf("telegram") !== -1) {
+    return iconDir + "/Telegram.png";
+  }
+  if (id.indexOf("whatsapp") !== -1) {
+    return iconDir + "/whatsapp.png";
+  }
+  if (id.indexOf("setting") !== -1 || id.indexOf("control") !== -1) {
+    return iconDir + "/settings.png";
+  }
+  if (id.indexOf("trash") !== -1) {
+    return iconDir + "/trash-empty.png";
+  }
+  if (id.indexOf("launchpad") !== -1 || id.indexOf("menu") !== -1) {
+    return iconDir + "/launchpad.png";
+  }
+
+  return fallbackIcon || appId || "";
 }
 
 function cleanId(str) {
@@ -200,11 +259,12 @@ function togglePinApp(config, app) {
   } else {
     // Pin to dock
     var grad = defaultGradients(newConfig.pinnedApps.length);
+    var resolvedIcon = resolveMacIcon(app.id, app.icon);
     newConfig.pinnedApps.push({
       id: app.id || app.name || "app",
       name: app.name || app.id || "Application",
       desktopFile: app.desktopFile || (app.id ? app.id + ".desktop" : ""),
-      icon: app.icon || app.id || "",
+      icon: resolvedIcon,
       exec: app.exec || "",
       gradientStart: app.gradientStart || grad.start,
       gradientEnd: app.gradientEnd || grad.end
@@ -248,11 +308,12 @@ function getUnpinnedRunningApps(toplevels, pinnedApps) {
       }
       cleanName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
       var grad = defaultGradients(unpinned.length + 3);
+      var macIcon = resolveMacIcon(rawAppId, rawAppId);
 
       unpinned.push({
         id: rawAppId,
         name: cleanName,
-        icon: rawAppId,
+        icon: macIcon,
         desktopFile: rawAppId + ".desktop",
         isUnpinnedRunning: true,
         gradientStart: grad.start,
