@@ -74,7 +74,7 @@ Item {
   }
 
   readonly property real distToMouse: (dockWindow && dockWindow.isShelfHovered) ? Math.abs(dockWindow.mouseShelfX - centerInShelf) : 9999
-  readonly property real hoverRadius: root.baseSize * 2.3
+  readonly property real hoverRadius: root.baseSize * 2.5
   readonly property real normDist: distToMouse / hoverRadius
 
   // Smooth cosine parabolic bell-curve with graceful exponential decay
@@ -89,11 +89,13 @@ Item {
     return 1.0 + (root.maxMagnification - 1.0) * waveInfluence
   }
 
-  // Instant 120 FPS cursor tracking while hovering (0ms latency), smooth 140ms ease-out on exit
+  // Fluid 120+ FPS continuous wave magnification with smooth cubic interpolation
   property real computedScale: targetScale
   Behavior on computedScale {
-    enabled: !dockWindow || !dockWindow.isShelfHovered
-    NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
+    NumberAnimation {
+      duration: (dockWindow && dockWindow.isShelfHovered) ? 60 : 160
+      easing.type: Easing.OutCubic
+    }
   }
 
   // Authentic macOS App Launch Bounce Animation
@@ -144,7 +146,7 @@ Item {
       height: root.baseSize
       anchors.horizontalCenter: parent.horizontalCenter
       anchors.bottom: parent.bottom
-      anchors.bottomMargin: Math.round(6 + (root.computedScale - 1.0) * root.baseSize * 0.45)
+      anchors.bottomMargin: 6
 
       scale: root.computedScale
       transformOrigin: Item.Bottom
@@ -241,7 +243,7 @@ Item {
     }
   }
 
-  readonly property bool isDirectlyHovered: clickArea.containsMouse || (dockWindow && dockWindow.isShelfHovered && normDist < 0.32)
+  readonly property bool isDirectlyHovered: clickArea.containsMouse || (dockWindow && dockWindow.isShelfHovered && normDist < 0.28)
 
   // Direct click and coordinate forwarding (does NOT steal or kill shelf hover)
   MouseArea {
@@ -260,7 +262,7 @@ Item {
 
     onEntered: {
       if (dockWindow && typeof dockWindow.updateHover === "function") {
-        var sX = dockWindow.layoutItem.x + root.x + (root.baseSize / 2)
+        var sX = dockWindow.layoutItem.x + root.x + clickArea.mouseX
         dockWindow.updateHover(sX)
       }
     }
@@ -284,11 +286,16 @@ Item {
   // Floating High-Contrast macOS Tooltip Pill
   Rectangle {
     id: tooltip
-    visible: root.isDirectlyHovered && (!dockWindow.menuPanel || !dockWindow.menuPanel.visible)
+    opacity: (root.isDirectlyHovered && (!dockWindow.menuPanel || !dockWindow.menuPanel.visible)) ? 1.0 : 0.0
+    visible: opacity > 0.01
     z: 9999
     anchors.bottom: root.top
     anchors.bottomMargin: Math.round(16 + (root.computedScale - 1.0) * root.baseSize * 1.1)
     anchors.horizontalCenter: parent.horizontalCenter
+
+    Behavior on opacity {
+      NumberAnimation { duration: 120; easing.type: Easing.OutQuad }
+    }
 
     implicitWidth: tooltipLabel.implicitWidth + 20
     implicitHeight: tooltipLabel.implicitHeight + 10

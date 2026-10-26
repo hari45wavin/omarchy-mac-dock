@@ -343,15 +343,15 @@ PanelWindow {
             var tops = DockModel.findAllMatchingToplevels(dockWindow.toplevelsList, targetApp)
             for (var t = 0; t < tops.length; t++) {
               var top = tops[t]
-              if (top && top.pid) {
-                Quickshell.execDetached(["hyprctl", "dispatch", "closewindow", "pid:" + top.pid])
+              if (top) {
+                top.close()
               }
             }
           } else if (actionId === "minimize") {
             var mTop = DockModel.findMatchingToplevel(dockWindow.toplevelsList, targetApp)
             if (mTop) {
               mTop.activate()
-              Quickshell.execDetached(["hyprctl", "eval", "hl.dsp.window.move({ workspace = 'special:minimized', follow = false })"])
+              Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.window.move({ workspace = 'special:minimized', follow = false })"])
             }
           } else if (actionId === "togglePin") {
             var updated = DockModel.togglePinApp(dockWindow.dockConfig, targetApp)
@@ -386,16 +386,12 @@ PanelWindow {
       var isCurrentActive = activeTop && DockModel.matchesToplevel(activeTop, app)
 
       if (isCurrentActive && dockConfig.clickToMinimize !== false) {
-        Quickshell.execDetached(["hyprctl", "eval", "hl.dsp.window.move({ workspace = 'special:minimized', follow = false })"])
+        Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.window.move({ workspace = 'special:minimized', follow = false })"])
         return
       }
 
-      if (matching.length === 1) {
-        var top = matching[0]
-        Quickshell.execDetached(["hyprctl", "eval", "hl.dsp.workspace.toggle_special('minimized')"])
-        top.activate()
-        Quickshell.execDetached(["hyprctl", "eval", "hl.dsp.window.bring_to_top()"])
-      } else {
+      var targetTop = matching[0]
+      if (matching.length > 1) {
         var currentIndex = -1
         for (var i = 0; i < matching.length; i++) {
           if (matching[i] === activeTop) {
@@ -404,9 +400,23 @@ PanelWindow {
           }
         }
         var nextIndex = (currentIndex + 1) % matching.length
-        matching[nextIndex].activate()
-        Quickshell.execDetached(["hyprctl", "eval", "hl.dsp.window.bring_to_top()"])
+        targetTop = matching[nextIndex]
       }
+
+      // 1. Activate via Wayland toplevel protocol
+      targetTop.activate()
+
+      // 2. Dispatch Hyprland focus via Lua API across ANY workspace!
+      var targetId = String(targetTop.appId || app.id || "").trim()
+      var targetTitle = String(targetTop.title || app.name || "").trim()
+      if (targetId.length > 0) {
+        Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.focus({ window = \"class:" + targetId + "\" })"])
+      } else if (targetTitle.length > 0) {
+        Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.focus({ window = \"title:" + targetTitle + "\" })"])
+      }
+
+      // Also ensure brought to top
+      Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.window.bring_to_top()"])
       return
     }
 
@@ -453,10 +463,10 @@ PanelWindow {
       hoverEnabled: true
       onEntered: {
         dockWindow.isDockHovered = true
-        dockWindow.triggerDismissTimer.restart()
+        triggerDismissTimer.restart()
       }
       onExited: {
-        dockWindow.triggerDismissTimer.restart()
+        triggerDismissTimer.restart()
       }
     }
   }
@@ -514,7 +524,7 @@ PanelWindow {
       hoverEnabled: true
       acceptedButtons: Qt.RightButton
       onEntered: {
-        dockWindow.updateHover(mouse.x)
+        dockWindow.updateHover(shelfHoverArea.mouseX)
       }
       onPositionChanged: function(mouse) {
         dockWindow.updateHover(mouse.x)
@@ -631,7 +641,7 @@ PanelWindow {
           gradientStart: "#ec4899",
           gradientEnd: "#be185d"
         })
-        onClicked: Quickshell.execDetached(["hyprctl", "dispatch", "workspace", "+1"])
+        onClicked: Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.focus({ workspace = \"+1\" })"])
         onRightClicked: function(mx, my, screenX) { dockWindow.openContextMenu(app, screenX) }
       }
 

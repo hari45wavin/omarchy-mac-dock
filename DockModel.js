@@ -122,38 +122,39 @@ function resolveMacIcon(appId, fallbackIcon) {
   var home = Quickshell.env("HOME");
   var iconDir = home + "/.config/omarchy/plugins/omarchy-mac-dock/assets/icons";
   var id = String(appId || "").toLowerCase();
+  var fallback = String(fallbackIcon || "").toLowerCase();
 
-  if (id.indexOf("nautilus") !== -1 || id.indexOf("finder") !== -1 || id.indexOf("files") !== -1) {
+  if (id.indexOf("nautilus") !== -1 || id.indexOf("finder") !== -1 || id.indexOf("files") !== -1 || fallback.indexOf("finder") !== -1) {
     return iconDir + "/Finder.png";
   }
-  if (id.indexOf("brave") !== -1) {
+  if (id.indexOf("brave") !== -1 || fallback.indexOf("brave") !== -1) {
     return iconDir + "/Brave.png";
   }
-  if (id.indexOf("vscode") !== -1 || id.indexOf("code") !== -1) {
+  if (id.indexOf("vscode") !== -1 || id.indexOf("code") !== -1 || fallback.indexOf("vscode") !== -1 || fallback.indexOf("code") !== -1) {
     return iconDir + "/vscode.png";
   }
-  if (id.indexOf("foot") !== -1 || id.indexOf("terminal") !== -1 || id.indexOf("alacritty") !== -1 || id.indexOf("kitty") !== -1) {
+  if (id.indexOf("foot") !== -1 || id.indexOf("terminal") !== -1 || id.indexOf("alacritty") !== -1 || id.indexOf("kitty") !== -1 || fallback.indexOf("terminal") !== -1) {
     return iconDir + "/Terminal.png";
   }
-  if (id.indexOf("spotify") !== -1) {
+  if (id.indexOf("spotify") !== -1 || fallback.indexOf("spotify") !== -1) {
     return iconDir + "/Spotify.png";
   }
-  if (id.indexOf("discord") !== -1) {
+  if (id.indexOf("discord") !== -1 || fallback.indexOf("discord") !== -1) {
     return iconDir + "/discord.png";
   }
-  if (id.indexOf("obsidian") !== -1) {
+  if (id.indexOf("obsidian") !== -1 || fallback.indexOf("obsidian") !== -1) {
     return iconDir + "/obsidian.png";
   }
-  if (id.indexOf("notion") !== -1) {
+  if (id.indexOf("notion") !== -1 || fallback.indexOf("notion") !== -1) {
     return iconDir + "/notion.png";
   }
-  if (id.indexOf("telegram") !== -1) {
+  if (id.indexOf("telegram") !== -1 || fallback.indexOf("telegram") !== -1) {
     return iconDir + "/Telegram.png";
   }
-  if (id.indexOf("whatsapp") !== -1) {
+  if (id.indexOf("whatsapp") !== -1 || fallback.indexOf("whatsapp") !== -1) {
     return iconDir + "/whatsapp.png";
   }
-  if (id.indexOf("setting") !== -1 || id.indexOf("control") !== -1) {
+  if (id.indexOf("setting") !== -1 || id.indexOf("control") !== -1 || fallback.indexOf("settings") !== -1) {
     return iconDir + "/settings.png";
   }
   if (id.indexOf("trash") !== -1) {
@@ -198,7 +199,7 @@ function matchesToplevel(toplevel, app) {
 }
 
 function findMatchingToplevel(toplevels, app) {
-  if (!toplevels || !Array.isArray(toplevels)) return null;
+  if (!toplevels || typeof toplevels.length !== "number") return null;
   for (var i = 0; i < toplevels.length; i++) {
     if (matchesToplevel(toplevels[i], app)) {
       return toplevels[i];
@@ -208,7 +209,7 @@ function findMatchingToplevel(toplevels, app) {
 }
 
 function findAllMatchingToplevels(toplevels, app) {
-  if (!toplevels || !Array.isArray(toplevels)) return [];
+  if (!toplevels || typeof toplevels.length !== "number") return [];
   var matches = [];
   for (var i = 0; i < toplevels.length; i++) {
     if (matchesToplevel(toplevels[i], app)) {
@@ -275,7 +276,7 @@ function togglePinApp(config, app) {
 }
 
 function getUnpinnedRunningApps(toplevels, pinnedApps) {
-  if (!toplevels || !Array.isArray(toplevels)) return [];
+  if (!toplevels || typeof toplevels.length !== "number") return [];
   var pinned = pinnedApps || [];
   var unpinned = [];
   var seenIds = {};
@@ -302,17 +303,20 @@ function getUnpinnedRunningApps(toplevels, pinnedApps) {
     if (!isPinned && !seenIds[lowerId]) {
       seenIds[lowerId] = true;
       var cleanName = rawAppId;
-      if (cleanName.indexOf(".") !== -1) {
+      if (cleanName === "GTK Application" || cleanName.length < 3) {
+        if (top.title && top.title.length > 0) cleanName = top.title;
+      } else if (cleanName.indexOf(".") !== -1) {
         var segs = cleanName.split(".");
         cleanName = segs[segs.length - 1];
       }
       cleanName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
       var grad = defaultGradients(unpinned.length + 3);
-      var macIcon = resolveMacIcon(rawAppId, rawAppId);
+      var macIcon = resolveMacIcon(rawAppId, cleanName.toLowerCase());
 
       unpinned.push({
         id: rawAppId,
         name: cleanName,
+        title: top.title || "",
         icon: macIcon,
         desktopFile: rawAppId + ".desktop",
         isUnpinnedRunning: true,
