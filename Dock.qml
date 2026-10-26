@@ -22,6 +22,7 @@ PanelWindow {
   property var settingsPanel: null
   property var menuPanel: null
   property bool isWritingConfig: false
+  property var minimizedApps: ({})
 
   // Feature detection for optional plugins
   property bool isOmaplugAvailable: false
@@ -348,11 +349,11 @@ PanelWindow {
               }
             }
           } else if (actionId === "minimize") {
-            var mTop = DockModel.findMatchingToplevel(dockWindow.toplevelsList, targetApp)
-            if (mTop) {
-              mTop.activate()
-              Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.window.move({ workspace = 'special:minimized', follow = false })"])
-            }
+            dockWindow.minimizeApp(targetApp)
+          } else if (actionId === "maximize") {
+            dockWindow.toggleMaximizeApp(targetApp)
+          } else if (actionId === "activate") {
+            dockWindow.launchOrActivate(targetApp, null)
           } else if (actionId === "togglePin") {
             var updated = DockModel.togglePinApp(dockWindow.dockConfig, targetApp)
             dockWindow.saveConfig(updated)
@@ -378,15 +379,75 @@ PanelWindow {
     DockMenu { }
   }
 
-  // Multi-window cycling and launch activation
+  // Smooth Minimize to Special Workspace
+  function minimizeApp(app) {
+    var matching = DockModel.findAllMatchingToplevels(toplevelsList, app)
+    if (matching.length === 0) return
+    var targetTop = matching[0]
+    var targetId = String(targetTop.appId || app.id || "").trim()
+    var appId = targetId.toLowerCase()
+    var curWs = Hyprland.focusedWorkspace ? String(Hyprland.focusedWorkspace.id) : "1"
+
+    var newMap = Object.assign({}, dockWindow.minimizedApps)
+    newMap[appId] = {
+      workspace: curWs,
+      title: String(targetTop.title || app.name || ""),
+      time: Date.now()
+    }
+    dockWindow.minimizedApps = newMap
+
+    Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.window.move({ workspace = 'special:minimized', window = 'class:" + targetId + "' })"])
+  }
+
+  // Smooth Restore from Special Workspace onto active workspace
+  function restoreApp(app, targetTop) {
+    var targetId = String((targetTop && targetTop.appId) || app.id || "").trim()
+    var appId = targetId.toLowerCase()
+    var curWs = Hyprland.focusedWorkspace ? String(Hyprland.focusedWorkspace.id) : "1"
+    var origWs = (dockWindow.minimizedApps && dockWindow.minimizedApps[appId] && dockWindow.minimizedApps[appId].workspace) 
+      ? dockWindow.minimizedApps[appId].workspace 
+      : curWs
+
+    var newMap = Object.assign({}, dockWindow.minimizedApps)
+    delete newMap[appId]
+    dockWindow.minimizedApps = newMap
+
+    Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.window.move({ workspace = '" + origWs + "', window = 'class:" + targetId + "' })"])
+    Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.focus({ window = \"class:" + targetId + "\" })"])
+    Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.window.bring_to_top()"])
+    if (targetTop && typeof targetTop.activate === "function") {
+      targetTop.activate()
+    }
+  }
+
+  // Toggle Maximize / Zoom
+  function toggleMaximizeApp(app) {
+    var top = DockModel.findMatchingToplevel(dockWindow.toplevelsList, app)
+    var targetId = String((top && top.appId) || app.id || "").trim()
+    if (targetId.length > 0) {
+      Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.window.fullscreen({ mode = 1, window = \"class:" + targetId + "\" })"])
+    }
+  }
+
+  // Multi-window cycling, minimize, restore, and launch activation
   function launchOrActivate(app, iconItem) {
     var matching = DockModel.findAllMatchingToplevels(toplevelsList, app)
+    var targetId = String((matching[0] && matching[0].appId) || app.id || "").trim()
+    var appId = targetId.toLowerCase()
+
+    // 1. If currently minimized, restore it immediately
+    if (dockWindow.minimizedApps && dockWindow.minimizedApps[appId]) {
+      dockWindow.restoreApp(app, matching[0])
+      return
+    }
+
     if (matching.length > 0) {
       var activeTop = ToplevelManager.activeToplevel
       var isCurrentActive = activeTop && DockModel.matchesToplevel(activeTop, app)
 
+      // 2. Click active focused app to minimize
       if (isCurrentActive && dockConfig.clickToMinimize !== false) {
-        Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.window.move({ workspace = 'special:minimized', follow = false })"])
+        dockWindow.minimizeApp(app)
         return
       }
 
@@ -403,19 +464,15 @@ PanelWindow {
         targetTop = matching[nextIndex]
       }
 
-      // 1. Activate via Wayland toplevel protocol
+      // 3. Activate Wayland toplevel & focus in Hyprland across ANY workspace!
       targetTop.activate()
-
-      // 2. Dispatch Hyprland focus via Lua API across ANY workspace!
-      var targetId = String(targetTop.appId || app.id || "").trim()
-      var targetTitle = String(targetTop.title || app.name || "").trim()
       if (targetId.length > 0) {
         Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.focus({ window = \"class:" + targetId + "\" })"])
-      } else if (targetTitle.length > 0) {
-        Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.focus({ window = \"title:" + targetTitle + "\" })"])
+      } else if (targetTop.title) {
+        Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.focus({ window = \"title:" + targetTop.title + "\" })"])
       }
 
-      // Also ensure brought to top
+      // Ensure brought to top
       Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.window.bring_to_top()"])
       return
     }

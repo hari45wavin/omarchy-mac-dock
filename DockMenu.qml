@@ -11,17 +11,10 @@ PanelWindow {
 
   property var targetApp: null
   property real targetCenterX: 0
-  property real targetShelfTopY: 0
   property bool isRunning: false
   property bool isPinned: false
 
-  signal actionPinToggle(var app)
-  signal actionQuit(var app)
-  signal actionMinimize(var app)
-  signal actionActivate(var app)
-  signal actionOpenSettings()
-  signal actionEmptyTrash()
-  signal actionOpenTrash()
+  signal actionTriggered(string actionId, var targetApp)
 
   visible: false
   color: "transparent"
@@ -37,10 +30,9 @@ PanelWindow {
   WlrLayershell.layer: WlrLayer.Overlay
   exclusionMode: ExclusionMode.Ignore
 
-  function openMenu(app, centerX, shelfTopY, running, pinned) {
+  function openMenu(app, centerX, running, pinned) {
     targetApp = app
     targetCenterX = centerX
-    targetShelfTopY = shelfTopY
     isRunning = running
     isPinned = pinned
     visible = true
@@ -59,20 +51,21 @@ PanelWindow {
     onClicked: menuWindow.closeMenu()
   }
 
-  // Floating Context Menu Card
+  // Floating Context Menu Card (placed cleanly right above the dock icon)
   Rectangle {
     id: menuCard
 
     readonly property string appTitle: targetApp ? String(targetApp.name || targetApp.id || "App") : ""
     readonly property bool isTrash: targetApp && (targetApp.id === "trash" || targetApp.name === "Trash")
 
-    width: 210
-    height: menuLayout.implicitHeight + 16
-    radius: 10
+    width: 220
+    height: menuLayout.implicitHeight + 18
+    radius: 12
 
-    // Position directly above the clicked icon, clamped within screen margins
+    // Position horizontally centered above the clicked icon, clamped within screen margins
     x: Math.max(14, Math.min(menuWindow.width - width - 14, targetCenterX - width / 2))
-    y: Math.max(14, targetShelfTopY - height - 10)
+    anchors.bottom: parent.bottom
+    anchors.bottomMargin: 80
 
     // macOS Frosted Dark Glass
     color: "#1c1c1e"
@@ -105,8 +98,8 @@ PanelWindow {
     // Smooth macOS Popover Entrance Animation
     ParallelAnimation {
       id: appearAnim
-      NumberAnimation { target: menuCard; property: "opacity"; from: 0; to: 1; duration: 110; easing.type: Easing.OutCubic }
-      NumberAnimation { target: menuCard; property: "scale"; from: 0.94; to: 1.0; duration: 110; easing.type: Easing.OutCubic }
+      NumberAnimation { target: menuCard; property: "opacity"; from: 0; to: 1; duration: 120; easing.type: Easing.OutCubic }
+      NumberAnimation { target: menuCard; property: "scale"; from: 0.94; to: 1.0; duration: 120; easing.type: Easing.OutCubic }
     }
 
     Column {
@@ -138,9 +131,9 @@ PanelWindow {
 
           Rectangle {
             visible: menuWindow.isRunning
-            width: 6
-            height: 6
-            radius: 3
+            width: 7
+            height: 7
+            radius: 3.5
             color: "#22c55e"
           }
         }
@@ -169,7 +162,7 @@ PanelWindow {
             glyph: "📂"
             onTriggered: {
               menuWindow.closeMenu()
-              menuWindow.actionOpenTrash()
+              menuWindow.actionTriggered("openTrash", null)
             }
           }
 
@@ -179,7 +172,7 @@ PanelWindow {
             isDestructive: true
             onTriggered: {
               menuWindow.closeMenu()
-              menuWindow.actionEmptyTrash()
+              menuWindow.actionTriggered("emptyTrash", null)
             }
           }
         }
@@ -201,7 +194,7 @@ PanelWindow {
             glyph: "↗"
             onTriggered: {
               menuWindow.closeMenu()
-              menuWindow.actionActivate(menuWindow.targetApp)
+              menuWindow.actionTriggered("activate", menuWindow.targetApp)
             }
           }
 
@@ -211,7 +204,17 @@ PanelWindow {
             glyph: "−"
             onTriggered: {
               menuWindow.closeMenu()
-              menuWindow.actionMinimize(menuWindow.targetApp)
+              menuWindow.actionTriggered("minimize", menuWindow.targetApp)
+            }
+          }
+
+          MenuItemRow {
+            visible: menuWindow.isRunning
+            title: "Maximize / Zoom Window"
+            glyph: "⤢"
+            onTriggered: {
+              menuWindow.closeMenu()
+              menuWindow.actionTriggered("maximize", menuWindow.targetApp)
             }
           }
 
@@ -222,7 +225,7 @@ PanelWindow {
             isDestructive: true
             onTriggered: {
               menuWindow.closeMenu()
-              menuWindow.actionQuit(menuWindow.targetApp)
+              menuWindow.actionTriggered("quit", menuWindow.targetApp)
             }
           }
 
@@ -239,7 +242,7 @@ PanelWindow {
             highlightGlyph: menuWindow.isPinned
             onTriggered: {
               menuWindow.closeMenu()
-              menuWindow.actionPinToggle(menuWindow.targetApp)
+              menuWindow.actionTriggered("togglePin", menuWindow.targetApp)
             }
           }
         }
@@ -258,7 +261,7 @@ PanelWindow {
         glyph: "⚙"
         onTriggered: {
           menuWindow.closeMenu()
-          menuWindow.actionOpenSettings()
+          menuWindow.actionTriggered("settings", null)
         }
       }
     }
@@ -274,8 +277,8 @@ PanelWindow {
     property bool highlightGlyph: false
     signal triggered()
 
-    width: parent ? parent.width : 194
-    height: 26
+    width: parent ? parent.width : 204
+    height: 28
     radius: 6
     color: itemMouse.containsMouse 
       ? (isDestructive ? "#dc2626" : "#0a84ff")
@@ -285,7 +288,7 @@ PanelWindow {
       anchors.fill: parent
       anchors.leftMargin: 8
       anchors.rightMargin: 8
-      spacing: 6
+      spacing: 8
 
       Text {
         text: rowItem.glyph
