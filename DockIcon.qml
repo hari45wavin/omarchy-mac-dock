@@ -7,6 +7,7 @@ import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
 import "DockModel.js" as DockModel
+import "IconResolver.js" as IconResolver
 
 Item {
   id: root
@@ -39,14 +40,20 @@ Item {
   readonly property color colorStart: app.gradientStart ? app.gradientStart : "#38bdf8"
   readonly property color colorEnd: app.gradientEnd ? app.gradientEnd : "#0284c7"
 
-  // Icon Source Resolution with fallback
+  // Icon Source Resolution with Custom Icons, bundled macOS assets, and theme fallback
   readonly property string iconUrl: {
+    var custom = (dockWindow && dockWindow.customIcons) ? dockWindow.customIcons : ({})
+    var rev = (dockWindow && dockWindow.customIconRevision) ? dockWindow.customIconRevision : 0
+    var iconDir = (dockWindow && dockWindow.iconsDir) ? dockWindow.iconsDir : ""
+    var resolved = IconResolver.resolveAppIcon(root.app, custom, iconDir, rev)
+    if (resolved && resolved.length > 0) return resolved
+
     if (!iconName || iconName === "") return ""
     if (iconName.indexOf("/") === 0 || iconName.indexOf("file://") === 0) {
       return iconName.indexOf("file://") === 0 ? iconName : "file://" + iconName
     }
-    var resolved = Quickshell.iconPath(iconName, true)
-    if (resolved && resolved.length > 0) return resolved
+    var qPath = Quickshell.iconPath(iconName, true)
+    if (qPath && qPath.length > 0) return qPath
 
     // Try symbolic variant
     if (iconName.indexOf("-symbolic") === -1) {
@@ -258,6 +265,10 @@ Item {
         var sX = dockWindow.layoutItem.x + root.x + mouse.x
         dockWindow.updateHover(sX)
       }
+      if (root.isRunning && dockWindow && typeof dockWindow.requestPreviewForApp === "function") {
+        var screenPt = root.mapToItem(null, root.width / 2, 0)
+        dockWindow.requestPreviewForApp(root.app, screenPt.x)
+      }
     }
 
     onEntered: {
@@ -265,9 +276,16 @@ Item {
         var sX = dockWindow.layoutItem.x + root.x + clickArea.mouseX
         dockWindow.updateHover(sX)
       }
+      if (root.isRunning && dockWindow && typeof dockWindow.requestPreviewForApp === "function") {
+        var screenPt = root.mapToItem(null, root.width / 2, 0)
+        dockWindow.requestPreviewForApp(root.app, screenPt.x)
+      }
     }
 
     onExited: {
+      if (dockWindow && typeof dockWindow.notifyIconHoverExit === "function") {
+        dockWindow.notifyIconHoverExit(root.app)
+      }
       if (dockWindow && typeof dockWindow.notifyHoverExit === "function") {
         dockWindow.notifyHoverExit()
       }
@@ -283,10 +301,12 @@ Item {
     }
   }
 
+  readonly property bool isPreviewActiveForThisApp: dockWindow && dockWindow.previewPanel && dockWindow.previewPanel.visible && dockWindow.previewAppId === (root.app && root.app.id)
+
   // Floating High-Contrast macOS Tooltip Pill
   Rectangle {
     id: tooltip
-    opacity: (root.isDirectlyHovered && (!dockWindow.menuPanel || !dockWindow.menuPanel.visible)) ? 1.0 : 0.0
+    opacity: (root.isDirectlyHovered && (!dockWindow.menuPanel || !dockWindow.menuPanel.visible) && !root.isPreviewActiveForThisApp) ? 1.0 : 0.0
     visible: opacity > 0.01
     z: 9999
     anchors.bottom: root.top

@@ -245,6 +245,15 @@ PanelWindow {
               menuWindow.actionTriggered("togglePin", menuWindow.targetApp)
             }
           }
+
+          MenuItemRow {
+            title: "Change Icon..."
+            glyph: "🎨"
+            onTriggered: {
+              menuWindow.closeMenu()
+              menuWindow.actionTriggered("changeIcon", menuWindow.targetApp)
+            }
+          }
         }
       }
 
@@ -253,6 +262,16 @@ PanelWindow {
         width: parent.width
         height: 1
         color: Qt.rgba(255, 255, 255, 0.10)
+      }
+
+      // Manage Icons Option
+      MenuItemRow {
+        title: "Manage App Icons..."
+        glyph: "✨"
+        onTriggered: {
+          menuWindow.closeMenu()
+          menuWindow.actionTriggered("manageIcons", null)
+        }
       }
 
       // Settings Option

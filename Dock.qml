@@ -8,6 +8,7 @@ import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
 import "DockModel.js" as DockModel
+import "IconResolver.js" as IconResolver
 
 PanelWindow {
   id: dockWindow
@@ -16,13 +17,29 @@ PanelWindow {
   property string pluginDir: home + "/.config/omarchy/plugins/omarchy-mac-dock"
   property string iconsDir: pluginDir + "/assets/icons"
   property string configPath: home + "/.config/omarchy/mac-dock.json"
+  property string iconMapPath: home + "/.config/omarchy/dock-icons.json"
+  property string helperPath: pluginDir + "/scripts/omarchy-dock-icon"
   property var dockConfig: DockModel.defaultConfig()
   property var toplevelsList: []
   property var unpinnedRunningApps: []
   property var settingsPanel: null
   property var menuPanel: null
+  property var iconPickerPanel: null
+  property var altTabPanel: null
+  property var previewPanel: previewPanelInstance
   property bool isWritingConfig: false
   property var minimizedApps: ({})
+
+  // Custom Icons State
+  property var customIcons: ({})
+  property int customIconRevision: 0
+
+  // Live Window Preview State (macOS Exposé)
+  property string previewAppId: ""
+  property var previewPendingApp: null
+  property real previewCenterX: 0
+  property var previewWindows: []
+  property bool previewVisible: false
 
   // Feature detection for optional plugins
   property bool isOmaplugAvailable: false
@@ -78,7 +95,7 @@ PanelWindow {
   // Auto-hide & Hover State Tracking
   property bool isDockHovered: false
   readonly property string hideMode: dockConfig.autoHideMode ? dockConfig.autoHideMode : (dockConfig.autoHide ? "always" : "intellihide")
-  readonly property bool isSettingsOpen: (settingsPanel !== null && settingsPanel.visible) || (menuPanel !== null && menuPanel.visible)
+  readonly property bool isSettingsOpen: (settingsPanel !== null && settingsPanel.visible) || (menuPanel !== null && menuPanel.visible) || (iconPickerPanel !== null && iconPickerPanel.open)
 
   // Focused Workspace window detection for Intellihide
   readonly property bool hasOpenAppsOnWorkspace: {
@@ -341,12 +358,9 @@ PanelWindow {
       if (menuPanel) {
         menuPanel.actionTriggered.connect(function(actionId, targetApp) {
           if (actionId === "quit") {
-            var tops = DockModel.findAllMatchingToplevels(dockWindow.toplevelsList, targetApp)
-            for (var t = 0; t < tops.length; t++) {
-              var top = tops[t]
-              if (top) {
-                top.close()
-              }
+            var wins = dockWindow.gatherWindowsForApp(targetApp)
+            for (var t = 0; t < wins.length; t++) {
+              dockWindow.closeWindowAddress(wins[t].address)
             }
           } else if (actionId === "minimize") {
             dockWindow.minimizeApp(targetApp)
@@ -357,6 +371,10 @@ PanelWindow {
           } else if (actionId === "togglePin") {
             var updated = DockModel.togglePinApp(dockWindow.dockConfig, targetApp)
             dockWindow.saveConfig(updated)
+          } else if (actionId === "changeIcon") {
+            dockWindow.openIconPicker(targetApp.id, targetApp.name)
+          } else if (actionId === "manageIcons") {
+            dockWindow.openManageIcons()
           } else if (actionId === "settings") {
             dockWindow.openSettings()
           } else if (actionId === "openTrash") {
@@ -379,101 +397,215 @@ PanelWindow {
     DockMenu { }
   }
 
+  // Live Desktop Windows Discovery for Previews, Exposé and Precise Focus
+  function gatherWindowsForApp(app) {
+    var output = []
+    if (!app) return output
+    var targetId = String(app.id || "").toLowerCase()
+    var desktopFile = String(app.desktopFile || "").toLowerCase().replace(/\.desktop$/, "")
+    var name = String(app.name || "").toLowerCase()
+    var exec = String(app.exec || "").toLowerCase()
+    var baseExec = exec ? exec.split(" ")[0].split("/").pop().toLowerCase() : ""
+
+    try {
+      var values = Hyprland.toplevels.values || []
+      for (var i = 0; i < values.length; i++) {
+        var candidate = values[i]
+        if (!candidate) continue
+        var ids = []
+        if (candidate.wayland && candidate.wayland.appId) ids.push(String(candidate.wayland.appId).toLowerCase())
+        var ipc = candidate.lastIpcObject || {}
+        if (ipc.appId) ids.push(String(ipc.appId).toLowerCase())
+        if (ipc["class"]) ids.push(String(ipc["class"]).toLowerCase())
+        if (ipc.initialClass) ids.push(String(ipc.initialClass).toLowerCase())
+
+        var match = false
+        for (var j = 0; j < ids.length; j++) {
+          var cid = ids[j]
+          if (cid === targetId || cid === desktopFile || (baseExec && cid === baseExec)) {
+            match = true; break
+          }
+          if (targetId.length > 2 && (cid.indexOf(targetId) !== -1 || targetId.indexOf(cid) !== -1)) {
+            match = true; break
+          }
+          if (desktopFile.length > 2 && (cid.indexOf(desktopFile) !== -1 || desktopFile.indexOf(cid) !== -1)) {
+            match = true; break
+          }
+        }
+        if (!match && name.length > 2) {
+          var cTitle = String(candidate.title || "").toLowerCase()
+          if (cTitle.indexOf(name) !== -1) match = true
+        }
+
+        if (!match) continue
+
+        output.push({
+          address: String(candidate.address || ""),
+          title: String(candidate.title || name || "Window"),
+          active: !!(ipc.focused || candidate.focused),
+          mapped: !!ipc.mapped,
+          minimized: !!ipc.minimized,
+          workspaceId: (ipc.workspace && ipc.workspace.id !== undefined) ? ipc.workspace.id : -1,
+          appId: targetId
+        })
+      }
+    } catch (e) {
+      console.warn("gatherWindowsForApp error:", e)
+    }
+    return output
+  }
+
+  // Hover Window Previews Management (macOS Peek)
+  function requestPreviewForApp(app, centerX) {
+    if (!app || isSettingsOpen || (menuPanel && menuPanel.visible)) return
+    previewGraceTimer.stop()
+    previewPendingApp = app
+    previewCenterX = centerX
+    previewDelayTimer.restart()
+  }
+
+  function notifyIconHoverExit(app) {
+    previewDelayTimer.stop()
+    previewGraceTimer.restart()
+  }
+
+  function hidePreview() {
+    previewDelayTimer.stop()
+    previewGraceTimer.stop()
+    previewVisible = false
+    previewAppId = ""
+    previewPendingApp = null
+    previewWindows = []
+  }
+
+  Timer {
+    id: previewDelayTimer
+    interval: 220
+    onTriggered: {
+      if (!dockWindow.previewPendingApp || dockWindow.isSettingsOpen || (dockWindow.menuPanel && dockWindow.menuPanel.visible)) return
+      var wins = dockWindow.gatherWindowsForApp(dockWindow.previewPendingApp)
+      if (wins.length === 0) return
+      dockWindow.previewAppId = String(dockWindow.previewPendingApp.id || "")
+      dockWindow.previewWindows = wins
+      dockWindow.previewVisible = true
+    }
+  }
+
+  Timer {
+    id: previewGraceTimer
+    interval: 320
+    onTriggered: {
+      dockWindow.hidePreview()
+    }
+  }
+
+  // Address-based Smooth Window Focus with Cursor Warps Protection
+  function focusWindowAddress(address) {
+    if (!address) return false
+    var normalized = String(address)
+    if (normalized.indexOf("0x") !== 0) normalized = "0x" + normalized
+    dockWindow.hidePreview()
+    Quickshell.execDetached(["bash", "-c", "hyprctl eval 'hl.config({ cursor = { no_warps = true } })'; hyprctl dispatch 'hl.dsp.focus({ window = \"address:" + normalized + "\" })'; hyprctl dispatch 'hl.dsp.window.bring_to_top()'; sleep 0.25; hyprctl eval 'hl.config({ cursor = { no_warps = false } })'"])
+    return true
+  }
+
+  // Address-based Window Close
+  function closeWindowAddress(address) {
+    if (!address) return false
+    var normalized = String(address)
+    if (normalized.indexOf("0x") !== 0) normalized = "0x" + normalized
+    Quickshell.execDetached(["hyprctl", "dispatch", "closewindow", "address:" + normalized])
+    if (dockWindow.previewPendingApp) {
+      Qt.callLater(function() {
+        var wins = dockWindow.gatherWindowsForApp(dockWindow.previewPendingApp)
+        if (wins.length === 0) {
+          dockWindow.hidePreview()
+        } else {
+          dockWindow.previewWindows = wins
+        }
+      })
+    }
+    return true
+  }
+
   // Smooth Minimize to Special Workspace
   function minimizeApp(app) {
-    var matching = DockModel.findAllMatchingToplevels(toplevelsList, app)
-    if (matching.length === 0) return
-    var targetTop = matching[0]
-    var targetId = String(targetTop.appId || app.id || "").trim()
-    var appId = targetId.toLowerCase()
+    var wins = gatherWindowsForApp(app)
+    if (wins.length === 0) return
+    var targetWin = wins[0]
+    var addr = targetWin.address
+    var appId = String(app.id || "").toLowerCase()
     var curWs = Hyprland.focusedWorkspace ? String(Hyprland.focusedWorkspace.id) : "1"
 
     var newMap = Object.assign({}, dockWindow.minimizedApps)
     newMap[appId] = {
+      address: addr,
       workspace: curWs,
-      title: String(targetTop.title || app.name || ""),
+      title: String(targetWin.title || app.name || ""),
       time: Date.now()
     }
     dockWindow.minimizedApps = newMap
 
-    Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.window.move({ workspace = 'special:minimized', window = 'class:" + targetId + "' })"])
+    Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.window.move({ workspace = 'special:minimized', window = 'address:" + addr + "' })"])
   }
 
   // Smooth Restore from Special Workspace onto active workspace
-  function restoreApp(app, targetTop) {
-    var targetId = String((targetTop && targetTop.appId) || app.id || "").trim()
-    var appId = targetId.toLowerCase()
+  function restoreApp(app) {
+    var appId = String(app.id || "").toLowerCase()
+    var minData = dockWindow.minimizedApps ? dockWindow.minimizedApps[appId] : null
     var curWs = Hyprland.focusedWorkspace ? String(Hyprland.focusedWorkspace.id) : "1"
-    var origWs = (dockWindow.minimizedApps && dockWindow.minimizedApps[appId] && dockWindow.minimizedApps[appId].workspace) 
-      ? dockWindow.minimizedApps[appId].workspace 
-      : curWs
+    var origWs = (minData && minData.workspace) ? minData.workspace : curWs
+    var addr = minData ? minData.address : ""
 
     var newMap = Object.assign({}, dockWindow.minimizedApps)
     delete newMap[appId]
     dockWindow.minimizedApps = newMap
 
-    Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.window.move({ workspace = '" + origWs + "', window = 'class:" + targetId + "' })"])
-    Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.focus({ window = \"class:" + targetId + "\" })"])
-    Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.window.bring_to_top()"])
-    if (targetTop && typeof targetTop.activate === "function") {
-      targetTop.activate()
-    }
+    var windowTarget = addr ? ("address:" + addr) : ("class:" + (app.id || ""))
+    Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.window.move({ workspace = '" + origWs + "', window = '" + windowTarget + "' })"])
+    dockWindow.focusWindowAddress(addr || windowTarget)
   }
 
   // Toggle Maximize / Zoom
   function toggleMaximizeApp(app) {
-    var top = DockModel.findMatchingToplevel(dockWindow.toplevelsList, app)
-    var targetId = String((top && top.appId) || app.id || "").trim()
-    if (targetId.length > 0) {
-      Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.window.fullscreen({ mode = 1, window = \"class:" + targetId + "\" })"])
+    var wins = gatherWindowsForApp(app)
+    if (wins.length > 0) {
+      Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.window.fullscreen({ mode = 1, window = 'address:" + wins[0].address + "' })"])
     }
   }
 
   // Multi-window cycling, minimize, restore, and launch activation
   function launchOrActivate(app, iconItem) {
-    var matching = DockModel.findAllMatchingToplevels(toplevelsList, app)
-    var targetId = String((matching[0] && matching[0].appId) || app.id || "").trim()
-    var appId = targetId.toLowerCase()
+    var appId = String(app.id || "").toLowerCase()
 
     // 1. If currently minimized, restore it immediately
     if (dockWindow.minimizedApps && dockWindow.minimizedApps[appId]) {
-      dockWindow.restoreApp(app, matching[0])
+      dockWindow.restoreApp(app)
       return
     }
 
-    if (matching.length > 0) {
-      var activeTop = ToplevelManager.activeToplevel
-      var isCurrentActive = activeTop && DockModel.matchesToplevel(activeTop, app)
+    var wins = gatherWindowsForApp(app)
+    if (wins.length > 0) {
+      var activeIndex = -1
+      for (var i = 0; i < wins.length; i++) {
+        if (wins[i].active) {
+          activeIndex = i
+          break
+        }
+      }
 
       // 2. Click active focused app to minimize
-      if (isCurrentActive && dockConfig.clickToMinimize !== false) {
+      if (activeIndex !== -1 && dockConfig.clickToMinimize !== false && wins.length === 1) {
         dockWindow.minimizeApp(app)
         return
       }
 
-      var targetTop = matching[0]
-      if (matching.length > 1) {
-        var currentIndex = -1
-        for (var i = 0; i < matching.length; i++) {
-          if (matching[i] === activeTop) {
-            currentIndex = i
-            break
-          }
-        }
-        var nextIndex = (currentIndex + 1) % matching.length
-        targetTop = matching[nextIndex]
+      var targetWin = wins[0]
+      if (wins.length > 1 && activeIndex !== -1) {
+        targetWin = wins[(activeIndex + 1) % wins.length]
       }
 
-      // 3. Activate Wayland toplevel & focus in Hyprland across ANY workspace!
-      targetTop.activate()
-      if (targetId.length > 0) {
-        Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.focus({ window = \"class:" + targetId + "\" })"])
-      } else if (targetTop.title) {
-        Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.focus({ window = \"title:" + targetTop.title + "\" })"])
-      }
-
-      // Ensure brought to top
-      Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.window.bring_to_top()"])
+      dockWindow.focusWindowAddress(targetWin.address)
       return
     }
 
@@ -776,6 +908,162 @@ PanelWindow {
     }
   }
 
+  // Live Window Preview Overlay Panel
+  WindowPreviewPanel {
+    id: previewPanelInstance
+    screen: dockWindow.screen
+    previewVisible: dockWindow.previewVisible && !dockWindow.isSettingsOpen && (!dockWindow.menuPanel || !dockWindow.menuPanel.visible)
+    windowList: dockWindow.previewWindows
+    centerX: dockWindow.previewCenterX
+    bottomY: dockWindow.height - (shelf.height + (dockConfig.bottomMargin || 10))
+    iconSourceFor: function(winData) {
+      return IconResolver.resolveAppIcon({ id: winData.appId }, dockWindow.customIcons, dockWindow.iconsDir, dockWindow.customIconRevision)
+    }
+    onActivated: function(winData) {
+      dockWindow.focusWindowAddress(winData.address)
+    }
+    onCloseRequested: function(winData) {
+      dockWindow.closeWindowAddress(winData.address)
+    }
+    onPreviewHoverEntered: {
+      dockWindow.previewGraceTimer.stop()
+      dockWindow.isDockHovered = true
+    }
+    onPreviewHoverExited: {
+      dockWindow.previewGraceTimer.restart()
+    }
+  }
+
+  // Custom Icon Management & Picker Integration
+  FileView {
+    id: customIconsFileView
+    path: dockWindow.iconMapPath
+    watchChanges: true
+    printErrors: false
+    onLoaded: dockWindow.loadCustomIcons(text())
+    onFileChanged: reload()
+  }
+
+  function loadCustomIcons(content) {
+    try {
+      var parsed = JSON.parse(String(content || "{}"))
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        dockWindow.customIcons = parsed
+        dockWindow.customIconRevision++
+      }
+    } catch (e) {}
+  }
+
+  function openIconPicker(appId, appName) {
+    if (!iconPickerPanel) {
+      iconPickerPanel = iconPickerComponent.createObject(dockWindow, {
+        screen: dockWindow.screen,
+        helperPath: dockWindow.helperPath,
+        customIcons: dockWindow.customIcons,
+        iconSourceFor: function(id) {
+          return IconResolver.resolveAppIcon({ id: id }, dockWindow.customIcons, dockWindow.iconsDir, dockWindow.customIconRevision)
+        }
+      })
+    }
+    if (iconPickerPanel) {
+      iconPickerPanel.customIcons = dockWindow.customIcons
+      iconPickerPanel.openForApp(appId, appName, false, true)
+    }
+  }
+
+  function openManageIcons() {
+    if (!iconPickerPanel) {
+      iconPickerPanel = iconPickerComponent.createObject(dockWindow, {
+        screen: dockWindow.screen,
+        helperPath: dockWindow.helperPath,
+        customIcons: dockWindow.customIcons,
+        iconSourceFor: function(id) {
+          return IconResolver.resolveAppIcon({ id: id }, dockWindow.customIcons, dockWindow.iconsDir, dockWindow.customIconRevision)
+        }
+      })
+    }
+    if (iconPickerPanel) {
+      iconPickerPanel.customIcons = dockWindow.customIcons
+      iconPickerPanel.openManage(true)
+    }
+  }
+
+  Component {
+    id: iconPickerComponent
+    IconPickerPanel { }
+  }
+
+  // Alt-Tab / App Switcher HUD Integration
+  function openAltTab() {
+    if (!altTabPanel) {
+      altTabPanel = altTabComponent.createObject(dockWindow, {
+        screen: dockWindow.screen,
+        iconSourceFor: function(app) {
+          return IconResolver.resolveAppIcon(app, dockWindow.customIcons, dockWindow.iconsDir, dockWindow.customIconRevision)
+        }
+      })
+      if (altTabPanel) {
+        altTabPanel.activated.connect(function(appId, appName) {
+          dockWindow.launchOrActivate({ id: appId, name: appName }, null)
+        })
+      }
+    }
+    return altTabPanel
+  }
+
+  Component {
+    id: altTabComponent
+    AltTabPanel { }
+  }
+
+  function altTabNext() {
+    var p = openAltTab()
+    if (!p) return
+    if (p.active) {
+      p.next()
+    } else {
+      var running = dockWindow.getRunningAppsList()
+      p.open(running, 1)
+    }
+  }
+
+  function altTabPrev() {
+    var p = openAltTab()
+    if (!p) return
+    if (p.active) {
+      p.prev()
+    } else {
+      var running = dockWindow.getRunningAppsList()
+      p.open(running, running.length > 1 ? running.length - 1 : 0)
+    }
+  }
+
+  function altTabCancel() {
+    if (altTabPanel && altTabPanel.active) {
+      altTabPanel.cancel()
+    }
+  }
+
+  function getRunningAppsList() {
+    var list = []
+    var seen = {}
+    var pinned = dockConfig.pinnedApps || []
+    for (var i = 0; i < pinned.length; i++) {
+      if (DockModel.isAppRunning(dockWindow.toplevelsList, pinned[i])) {
+        list.push(pinned[i])
+        seen[pinned[i].id] = true
+      }
+    }
+    var unpinned = dockWindow.unpinnedRunningApps || []
+    for (var j = 0; j < unpinned.length; j++) {
+      if (!seen[unpinned[j].id]) {
+        list.push(unpinned[j])
+        seen[unpinned[j].id] = true
+      }
+    }
+    return list
+  }
+
   // IPC command handler for toggling and settings
   IpcHandler {
     target: "omarchy-mac-dock"
@@ -791,6 +1079,18 @@ PanelWindow {
     }
     function settings(): void {
       dockWindow.openSettings()
+    }
+    function manageIcons(): void {
+      dockWindow.openManageIcons()
+    }
+    function altTabNext(): void {
+      dockWindow.altTabNext()
+    }
+    function altTabPrev(): void {
+      dockWindow.altTabPrev()
+    }
+    function altTabCancel(): void {
+      dockWindow.altTabCancel()
     }
   }
 }

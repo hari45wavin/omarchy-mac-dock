@@ -27,16 +27,19 @@
 ## ✨ Key Features
 
 - **🍎 macOS Floating Glass Shelf** — Translucent frosted-glass backdrop with specular rim reflections, theme-aware blending, dynamic shelf width expansion, and ambient depth shadows.
+- **🖼️ Live Hover Window Previews (macOS App Exposé Peek)** — Hover over any running app to reveal live compositor window thumbnails powered by Quickshell `ScreencopyView`. See all open instances side-by-side, inspect titles, raise windows with zero cursor warping, or close them with the hover `✕` button!
+- **🎨 Integrated macOSicons.com Search & Icon Picker** — Right-click any icon -> "Change Icon..." or "Manage App Icons..." to browse thousands of genuine macOS icons from macosicons.com, or select any local image with automatic 22% squircle masking and instant hot-reloading!
+- **⌨️ macOS App Switcher HUD (Cmd+Tab / Alt+Tab)** — Centered translucent glass HUD displaying running apps with keyboard navigation (`omarchy-shell -q omarchy-mac-dock altTabNext`).
 - **🎨 Authentic macOS Big Sur & Sonoma High-Res Squircles** — Clean, borderless 256x256 Apple squircle artwork with authentic 3D depth, specular reflections, and shadows (Finder, Terminal, VSCode, Brave, Spotify, Discord, Obsidian, Notion, WhatsApp, Telegram, Launchpad, Settings, Trash).
-- **🌊 Continuous Parabolic Wave Magnification** — Authentic macOS bell-curve algorithm (reverse-engineered from `macos_dock`) where neighboring icons fluidly expand and make physical room as your cursor sweeps horizontally.
+- **🌊 Continuous Parabolic Wave Magnification** — Authentic macOS bell-curve algorithm where neighboring icons fluidly expand and make physical room as your cursor sweeps horizontally at 120+ FPS.
 - **🏀 Authentic App Launch Bounce** — Icons bounce up and down with spring-physics easing when clicked until the Wayland application window maps on screen.
 - **🗂️ Dynamic Recent / Unpinned Apps Partition** — When you launch unpinned apps, they appear in a dedicated macOS recent partition with running dots; right-click any to keep it in the dock!
-- **📋 Native macOS Popover Context Menus** — Right-click any app icon for a sleek frosted popover menu with "Bring to Front", "Minimize", "Quit", "Keep in Dock", and Trash management.
-- **🔄 Multi-Window Cycling** — Clicking an app with multiple open instances cycles focus seamlessly through every window.
+- **📋 Native macOS Popover Context Menus** — Right-click any app icon for a sleek frosted popover menu with "Bring to Front", "Minimize Window", "Maximize / Zoom Window", "Quit Application", "Change Icon...", "Manage App Icons...", and "Keep in Dock".
+- **🔄 Multi-Window Cycling** — Clicking an app with multiple open instances cycles focus seamlessly through every window across any workspace.
 - **🙈 Intelligent Auto-Hide & Intellihide** — 3 configurable visibility modes: Intellihide (hides when apps are open, visible on clean desktop), Always Auto-Hide (only appears on bottom edge hover with 550ms debounce grace period), and Always Visible (reserves desktop workspace).
 - **💬 Floating High-Contrast Tooltips** — Solid frosted dark tooltip pills with drop shadows that never clip at window boundaries or merge with open windows above.
 - **🟢 Hyprland Window Tracking & Active Dots** — Live window state indicators (illuminated pill for the focused window, glowing dot for background running apps).
-- **🪟 Click-to-Minimize & Toggle Focus** — Click an active app's dock icon to instantly minimize it into Hyprland's scratchpad; click again to restore it seamlessly.
+- **🪟 Flawless Address-Based Minimization & Zoom** — Precise `address:0x...` targeting ensures minimizing, zooming, and restoring operates on the exact target window without affecting other windows of the same application.
 - **💾 Flawless Settings Persistence** — All size selections (36px to 72px), auto-hide modes, and pinned app configurations save atomically to `~/.config/omarchy/mac-dock.json` without reverting.
 - **🚀 Pre-Task System Launchers & Modules**:
   - 📱 **Launchpad / Menu** — Quick-open Omarchy application menu with modern rocket launcher icon.

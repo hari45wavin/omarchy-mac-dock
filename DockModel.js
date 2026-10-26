@@ -46,7 +46,7 @@ function defaultConfig() {
         id: "antigravity",
         name: "Antigravity IDE",
         desktopFile: "antigravity.desktop",
-        icon: "antigravity",
+        icon: home + "/.local/share/icons/hicolor/512x512/apps/antigravity.png",
         exec: "antigravity",
         gradientStart: "#818cf8",
         gradientEnd: "#4f46e5"
